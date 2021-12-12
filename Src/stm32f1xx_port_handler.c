@@ -17,7 +17,7 @@ bool DMA_TRANSMIT_COMPLETE;
  * @param void
  * @return void
  */
-void UART_DMA_Init(UART_HandleTypeDef huart) {  
+void UART_DMA_Init(UART_HandleTypeDef *huart) {  
   
   HAL_message_queue = constructMessage();
   DMA_TRANSMIT_COMPLETE = false;
@@ -25,16 +25,16 @@ void UART_DMA_Init(UART_HandleTypeDef huart) {
   HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_RESET);
 
   // initialize UART Receive
-  if (HAL_UART_Receive_DMA(&huart, rxBuffer, UART_RX__SZ) != HAL_OK) {
+  if (HAL_UART_Receive_DMA(huart, rxBuffer, UART_RX__SZ) != HAL_OK) {
     Error_Handler();
   }
 
-  __HAL_UART_ENABLE_IT(&huart, UART_IT_IDLE);   // enable idle line interrupt  
+  __HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);   // enable idle line interrupt  
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-  UART_rx_transfer_to_queue(*huart);
+  UART_rx_transfer_to_queue(huart);
   __HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);   // enable idle line interrupt  
 }
 
@@ -64,14 +64,14 @@ void UART_Transmit(char *message, uint8_t size){
  * @param void 
  * @return void
  */
-void UART_rx_transfer_to_queue(UART_HandleTypeDef huart) {
+void UART_rx_transfer_to_queue(UART_HandleTypeDef *huart) {
 
   while(!rxBuffer_is_empty(huart) && !isFull(HAL_message_queue)) {
     enQueue(HAL_message_queue, get_one_byte_from_buffer(huart));
   }
 }
 
-uint32_t get_header(UART_HandleTypeDef huart) {
+uint32_t get_header(UART_HandleTypeDef *huart) {
   int i;
   uint32_t header = 0;
   for (i=0; i<4; i++) {
@@ -86,8 +86,8 @@ uint32_t get_header(UART_HandleTypeDef huart) {
  * @param void
  * @return true if buffer is empty
  */
-bool rxBuffer_is_empty(UART_HandleTypeDef huart) {
-  uint16_t dma_ptr = __UART_DMA_WRITE_PTR(huart);
+bool rxBuffer_is_empty(UART_HandleTypeDef *huart) {
+  uint16_t dma_ptr = __UART_DMA_WRITE_PTR(&huart);
 	if(rd_ptr == dma_ptr) {
 		return true;
 	}
@@ -99,9 +99,9 @@ bool rxBuffer_is_empty(UART_HandleTypeDef huart) {
  * @param void
  * @return 1 byte from receive buffer
  */
-uint8_t get_one_byte_from_buffer(UART_HandleTypeDef huart) {
+uint8_t get_one_byte_from_buffer(UART_HandleTypeDef *huart) {
 	uint8_t message_byte = 0;
-  uint16_t dma_ptr = __UART_DMA_WRITE_PTR(huart);
+  uint16_t dma_ptr = __UART_DMA_WRITE_PTR(&huart);
 	if(rd_ptr != dma_ptr) {
 		message_byte = rxBuffer[rd_ptr++];
 		rd_ptr &= (UART_RX__SZ - 1);
