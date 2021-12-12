@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Cortex Debug",
+            "cwd": "${workspaceRoot}",
+            "executable": "./build/BlackWidowFreeRTOS.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            "configFiles": [
+                "C:/openocd/0.10.0-13.1/.content/scripts/interface/stlink-v2-1.cfg",
+                "C:/openocd/0.10.0-13.1/.content/scripts/target/stm32f1x.cfg"
+            ]
+        }
+    ]
+}
