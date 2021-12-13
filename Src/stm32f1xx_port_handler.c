@@ -46,15 +46,11 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 	// x++;
 }
 
-void UART_Transmit(char *message, uint8_t size){
-	
-  // set direction pin to transmit
-	HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_SET);	
+void UART_Transmit(uint8_t *message, uint8_t size){
+
   DMA_TRANSMIT_COMPLETE = false;
   HAL_UART_Transmit_DMA(&huart1, message, size);
-  //HAL_UART_Transmit(&huart1, message, size, 100);	
-	//HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_RESET);
-	//volatile int x = 1;
+  //HAL_UART_Transmit(&huart1, message, size, 100);		
 }
 
 /* @brief Transfers UART receive buffer to queue to enable prompt 
@@ -65,8 +61,11 @@ void UART_Transmit(char *message, uint8_t size){
  * @return void
  */
 void UART_rx_transfer_to_queue(UART_HandleTypeDef *huart) {
-
-  while(!rxBuffer_is_empty(huart) && !isFull(HAL_message_queue)) {
+  volatile bool empty = false;
+  volatile bool full = false;
+  while(!empty && !full) {
+    empty = rxBuffer_is_empty(huart);
+    full = isFull(HAL_message_queue);
     enQueue(HAL_message_queue, get_one_byte_from_buffer(huart));
   }
 }
@@ -89,6 +88,7 @@ uint32_t get_header(UART_HandleTypeDef *huart) {
 bool rxBuffer_is_empty(UART_HandleTypeDef *huart) {
   uint16_t dma_ptr = __UART_DMA_WRITE_PTR(&huart);
 	if(rd_ptr == dma_ptr) {
+    rd_ptr = 0; // troubleshooting: <- this could be the problem...
 		return true;
 	}
 	return false;

@@ -18,7 +18,7 @@ SemaphoreHandle_t task_lock = NULL;
 void start_tasks(void) {
   task_lock = xSemaphoreCreateMutex();
   rx_message_task_id = osThreadNew(rx_message_task, NULL, NULL);
-  tx_message_task_id = osThreadNew(tx_message_task, NULL, NULL);
+  // tx_message_task_id = osThreadNew(tx_message_task, NULL, NULL);
   blink_onboard_id = osThreadNew(BLINK_ONBOARD_TASK, NULL, NULL);
   blink_offboard_id = osThreadNew(BLINK_OFFBOARD_TASK, NULL, NULL);  
 
@@ -30,11 +30,11 @@ void rx_message_task(void *argument) {
   }		
 }
 
-void tx_message_task(void *argument) {  
-  for(;;) {
-    processes_transmit_messages_task();
-  }
-}
+// void tx_message_task(void *argument) {  
+//   for(;;) {
+//     processes_transmit_messages_task();
+//   }
+// }
 
 void BLINK_ONBOARD_TASK(void *argument) {
   for(;;) {

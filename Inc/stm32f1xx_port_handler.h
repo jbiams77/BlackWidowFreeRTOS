@@ -21,7 +21,7 @@
 void UART_DMA_Init(UART_HandleTypeDef *huart);
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart);
-void UART_Transmit(char *message, uint8_t size);
+void UART_Transmit(uint8_t *message, uint8_t size);
 uint8_t get_one_byte_from_buffer(UART_HandleTypeDef *huart);
 bool rxBuffer_is_empty(UART_HandleTypeDef *huart); 
 bool validate_header(uint32_t header);
