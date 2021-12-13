@@ -7,6 +7,7 @@ MessageQueue* constructMessage(void) {
     queue->SIZE = HAL_BUFFER_SIZE;
     queue->front = -1;
     queue->rear = 0;
+    queue->messageRdy = false;
     for (i=0; i<queue->SIZE; i++){
         queue->fifo[i] = 0;    
     }
@@ -70,4 +71,9 @@ int nextRear(MessageQueue *queue){
 
 int nextFront(MessageQueue *queue){
     return (queue->front + 1) % queue->SIZE;
+}
+
+void flush(MessageQueue *queue){
+    queue->front = -1;
+    queue->rear = 0;
 }

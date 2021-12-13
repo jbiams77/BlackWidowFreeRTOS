@@ -11,16 +11,25 @@ typedef struct MessageQueue {
     uint8_t fifo[HAL_BUFFER_SIZE];
     uint8_t SIZE;
     int front; 
-    int rear;     
+    int rear;
+    bool messageRdy;
 } MessageQueue;
 
 MessageQueue* constructMessage(void);
+
+// Put a byte in
 bool enQueue(MessageQueue*, uint8_t);
+
+// Take a byte out
 bool deQueue(MessageQueue*, uint8_t*);
 bool isEmpty(MessageQueue*);
 bool isFull(MessageQueue*);
 uint8_t peek(MessageQueue*);
 int nextRear(MessageQueue*);
 int nextFront(MessageQueue*);
+
+// For now, lets let flush just remove the entire queue
+// Later on we need to handle multiple messages
+void flush(MessageQueue *);
 
 #endif

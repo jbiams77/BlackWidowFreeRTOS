@@ -28,7 +28,7 @@ void UART_DMA_Init(UART_HandleTypeDef *huart) {
   if (HAL_UART_Receive_DMA(huart, rxBuffer, UART_RX__SZ) != HAL_OK) {
     Error_Handler();
   }
-
+  __HAL_UART_DISABLE_IT(huart, DMA_IT_HT);
   __HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);   // enable idle line interrupt  
 }
 
@@ -38,20 +38,20 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   __HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);   // enable idle line interrupt  
 }
 
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-{
-  DMA_TRANSMIT_COMPLETE = true;
-	// HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_RESET);
-	// volatile int x = 1;
-	// x++;
-}
-
-void UART_Transmit(uint8_t *message, uint8_t size){
-
+void UART_Transmit(uint8_t *message, uint8_t size) {
   DMA_TRANSMIT_COMPLETE = false;
+  __HAL_UART_DISABLE_IT(&huart1, UART_IT_IDLE);   // disable IT when transmitting
   HAL_UART_Transmit_DMA(&huart1, message, size);
-  //HAL_UART_Transmit(&huart1, message, size, 100);		
+  
 }
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
+  
+  __HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);   // enable idle line interrupt  
+  DMA_TRANSMIT_COMPLETE = true;
+
+}
+
 
 /* @brief Transfers UART receive buffer to queue to enable prompt 
  * rx_buffer readines for next HAL_message_queue. Throws error if receive
@@ -68,6 +68,9 @@ void UART_rx_transfer_to_queue(UART_HandleTypeDef *huart) {
     full = isFull(HAL_message_queue);
     enQueue(HAL_message_queue, get_one_byte_from_buffer(huart));
   }
+
+  rd_ptr = 0;
+  HAL_message_queue->messageRdy = true;
 }
 
 uint32_t get_header(UART_HandleTypeDef *huart) {
@@ -87,8 +90,7 @@ uint32_t get_header(UART_HandleTypeDef *huart) {
  */
 bool rxBuffer_is_empty(UART_HandleTypeDef *huart) {
   uint16_t dma_ptr = __UART_DMA_WRITE_PTR(&huart);
-	if(rd_ptr == dma_ptr) {
-    rd_ptr = 0; // troubleshooting: <- this could be the problem...
+	if(rd_ptr == dma_ptr) {    
 		return true;
 	}
 	return false;

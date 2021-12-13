@@ -23,7 +23,7 @@ uint8_t ping[PING_SIZE] = {0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x07, 0x00, STATUS, NON
 void processes_received_messages_task(void) {  
 
   // loop over HAL messages 
-  while(0 == isEmpty(HAL_message_queue)) {
+  while(HAL_message_queue->messageRdy) {
 		xSemaphoreTake(task_lock, 100);
 		
     // TODO: Revie byte stuffing as defined in Dynamixel Protocol 2.0
@@ -34,9 +34,13 @@ void processes_received_messages_task(void) {
     volatile uint8_t instruction = (uint8_t)grab_number_of_bytes_L(HAL_message_queue, instruction_size);
      // TODO: Determine if this is little endian or big endian
     volatile int parameters = grab_number_of_bytes_B(HAL_message_queue, param_size);
-    volatile int crc = grab_number_of_bytes_B(HAL_message_queue, crc_size);    
-		xSemaphoreGive(task_lock);
+    volatile int crc = grab_number_of_bytes_B(HAL_message_queue, crc_size);
 
+
+    flush(HAL_message_queue);
+    HAL_message_queue->messageRdy = false;
+
+    xSemaphoreGive(task_lock);
     if (packet_id == self.id) {
       respond(instruction, parameters);
     }
