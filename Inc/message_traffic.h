@@ -60,14 +60,9 @@ typedef enum {
     ACCESS_ERROR = 0x07
 } DError;
 
-struct TransmitMessage {
-  int message_len;
-  int struct_size;
-  char message[0];
-};
 
 void processes_received_messages_task(void); 
-void processes_transmit_messages_task(void);
+void transmit_message(uint8_t *, uint8_t);
 void respond(uint8_t, int);
 int grab_number_of_bytes_L(MessageQueue*, uint8_t);
 int grab_number_of_bytes_B(MessageQueue*, uint8_t);

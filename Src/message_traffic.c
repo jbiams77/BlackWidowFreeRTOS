@@ -16,27 +16,14 @@ const uint8_t id_size = 1;
 const uint8_t instruction_size = 1;
 const uint8_t crc_size = 2;
 
-struct TransmitMessage *transmit_message;
 bool TRANSMIT_READY = false;
-char ping[PING_SIZE] = {0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x07, 0x00, STATUS, NONE, 0xBB, 0xBB, 0x01, 0x00, 0x00};
+uint8_t ping[PING_SIZE] = {0xFF, 0xFF, 0xFD, 0x00, 0x01, 0x07, 0x00, STATUS, NONE, 0xBB, 0xBB, 0x01, 0x00, 0x00};
 
-//Memory allocation and initialisation of structure
-struct TransmitMessage *createMessage(struct TransmitMessage *tm, char a[]) {
-
-    tm = malloc( sizeof(*tm) + sizeof(char) * strlen(a) );  
-    
-    tm->message_len = strlen(a);
-    strcpy(tm->message, a);
-      
-    tm->struct_size = ( sizeof(*tm) + sizeof(char) * strlen(tm->message) );
-      
-    return tm;    
-}
 
 void processes_received_messages_task(void) {  
 
   // loop over HAL messages 
-  while(0 == isEmpty(HAL_message_queue)) {
+  while(HAL_message_queue->messageRdy) {
 		xSemaphoreTake(task_lock, 100);
 		
     // TODO: Revie byte stuffing as defined in Dynamixel Protocol 2.0
@@ -47,9 +34,13 @@ void processes_received_messages_task(void) {
     volatile uint8_t instruction = (uint8_t)grab_number_of_bytes_L(HAL_message_queue, instruction_size);
      // TODO: Determine if this is little endian or big endian
     volatile int parameters = grab_number_of_bytes_B(HAL_message_queue, param_size);
-    volatile int crc = grab_number_of_bytes_B(HAL_message_queue, crc_size);    
-		xSemaphoreGive(task_lock);
+    volatile int crc = grab_number_of_bytes_B(HAL_message_queue, crc_size);
 
+
+    flush(HAL_message_queue);
+    HAL_message_queue->messageRdy = false;
+
+    xSemaphoreGive(task_lock);
     if (packet_id == self.id) {
       respond(instruction, parameters);
     }
@@ -59,11 +50,9 @@ void processes_received_messages_task(void) {
 
 void respond(uint8_t instruction, int parameters)  {  
   
-  struct TransmitMessage *tm;
   switch (instruction) {
   case PING:  
-    transmit_message = createMessage(tm, ping);
-    TRANSMIT_READY = true;
+    transmit_message(ping, PING_SIZE);
     break;
   
   default:
@@ -71,17 +60,15 @@ void respond(uint8_t instruction, int parameters)  {
   }
 }
 
-void processes_transmit_messages_task(void) {
-  if (TRANSMIT_READY) {
-    //xSemaphoreTake(task_lock, 100);
-    HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_SET);	
-    UART_Transmit(transmit_message->message, transmit_message->message_len);
-    while(DMA_TRANSMIT_COMPLETE != true){};
-    HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_RESET);	
-    TRANSMIT_READY = false;
-    free(transmit_message);
-    //xSemaphoreGive(task_lock);
-  }
+void transmit_message(uint8_t *message, uint8_t size) {
+
+  //xSemaphoreTake(task_lock, 100);
+  HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_SET);	
+  UART_Transmit(message, size);
+  while(DMA_TRANSMIT_COMPLETE != true){};
+  HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_RESET);	
+  //xSemaphoreGive(task_lock);
+
 }
 
 // uint8_t* ping_respond(uint8_t*ping) {  

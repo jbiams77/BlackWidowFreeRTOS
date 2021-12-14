@@ -10,7 +10,8 @@
 		"cortex-debug.variableUseNaturalFormat": true,
 		"files.associations": {
 			"stm32f1xx_hal.h": "c",
-			"stm32f1xx_port_handler.h": "c"
+			"stm32f1xx_port_handler.h": "c",
+			"message_traffic.h": "c"
 		}
 	},
 	"launch": {
