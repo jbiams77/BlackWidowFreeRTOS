@@ -93,7 +93,7 @@ void HardFault_Handler(void)
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
   {
-    HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+    HAL_GPIO_TogglePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin);
     HAL_Delay(500);
   }
 }
@@ -109,7 +109,7 @@ void MemManage_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_MemoryManagement_IRQn 0 */
-    HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+    HAL_GPIO_TogglePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin);
   }
 }
 
@@ -172,9 +172,7 @@ void DMA1_Channel4_IRQHandler(void)
 
   /* USER CODE END DMA1_Channel4_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_usart1_tx);
-
   /* USER CODE BEGIN DMA1_Channel4_IRQn 1 */
-	// HAL_UART_RxCpltCallback(&huart1);
 
   /* USER CODE END DMA1_Channel4_IRQn 1 */
 }
@@ -212,12 +210,13 @@ void TIM1_UP_IRQHandler(void)
   */
 void USART1_IRQHandler(void)
 {
+  /* USER CODE BEGIN USART1_IRQn 0 */
+
+  /* USER CODE END USART1_IRQn 0 */
   HAL_UART_IRQHandler(&huart1);
-  
-  if(__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE)) {
-    __HAL_UART_CLEAR_IDLEFLAG(&huart1);
-    HAL_UART_RxCpltCallback(&huart1);
-  }
+  /* USER CODE BEGIN USART1_IRQn 1 */
+
+  /* USER CODE END USART1_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

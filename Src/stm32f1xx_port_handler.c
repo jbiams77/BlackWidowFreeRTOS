@@ -7,6 +7,8 @@ uint8_t rxBuffer[UART_RX__SZ];
 uint8_t txBuffer[UART_TX__SZ];;
 uint8_t rd_ptr;
 extern UART_HandleTypeDef huart1;
+extern DMA_HandleTypeDef hdma_usart1_rx;
+extern DMA_HandleTypeDef hdma_usart1_tx;
 bool DMA_TRANSMIT_COMPLETE;
 /* Methods ------------------------------------------------------------------*/
 
@@ -17,37 +19,44 @@ bool DMA_TRANSMIT_COMPLETE;
  * @param void
  * @return void
  */
-void UART_DMA_Init(UART_HandleTypeDef *huart) {  
+void UART_DMA_Init() {  
   
   HAL_message_queue = constructMessage();
   DMA_TRANSMIT_COMPLETE = false;
-  // set direction to receive
+
   HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_RESET);
 
-  // initialize UART Receive
-  if (HAL_UART_Receive_DMA(huart, rxBuffer, UART_RX__SZ) != HAL_OK) {
+  if (HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rxBuffer, UART_RX__SZ) != HAL_OK) {
     Error_Handler();
   }
-  __HAL_UART_DISABLE_IT(huart, DMA_IT_HT);
-  __HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);   // enable idle line interrupt  
+
+  // Disable the Half-Transfer interrupt
+  __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
+  __HAL_DMA_DISABLE_IT(&hdma_usart1_tx, DMA_IT_HT);
+
 }
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
   UART_rx_transfer_to_queue(huart);
-  __HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);   // enable idle line interrupt  
+  
+  if (HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rxBuffer, UART_RX__SZ) != HAL_OK) {
+    Error_Handler();
+  }
+  
 }
 
 void UART_Transmit(uint8_t *message, uint8_t size) {
-  DMA_TRANSMIT_COMPLETE = false;
-  __HAL_UART_DISABLE_IT(&huart1, UART_IT_IDLE);   // disable IT when transmitting
-  HAL_UART_Transmit_DMA(&huart1, message, size);
+
+  DMA_TRANSMIT_COMPLETE = false;  
+  HAL_UART_Transmit_IT(&huart1, message, size);
   
 }
 
+
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
   
-  __HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);   // enable idle line interrupt  
+  // __HAL_UART_ENABLE_IT(huart, UART_IT_IDLE);   // enable idle line interrupt  
   DMA_TRANSMIT_COMPLETE = true;
 
 }

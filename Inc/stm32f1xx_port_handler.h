@@ -18,7 +18,7 @@
 #define TRUE    1
 #define FALSE	0
 
-void UART_DMA_Init(UART_HandleTypeDef *huart);
+void UART_DMA_Init();
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart);
 void UART_Transmit(uint8_t *message, uint8_t size);

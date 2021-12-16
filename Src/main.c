@@ -5,8 +5,6 @@
 #include "task_manager.h"
 #include "device.h"
 
-extern UART_HandleTypeDef huart1;
-
 
 /**
   * @brief  The application entry point.
@@ -21,7 +19,7 @@ int main(void)
   MX_DMA_Init();
   MX_I2C2_Init();
   MX_USART1_UART_Init();  
-  UART_DMA_Init(&huart1);  
+  UART_DMA_Init();  
   initialize_self();
   osKernelInitialize();  
 	
