@@ -1,54 +1,53 @@
+//
+// !!! WARNING !!! AUTO-GENERATED FILE!
+// PLEASE DO NOT MODIFY IT AND USE "platformio.ini":
+// https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
+//
 {
-  "configurations": [
-    {
-      "name": "Win32",
-      "includePath": [
-        "${workspaceFolder}/**",
-        "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
-        "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2",
-        "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM3",
-        "${workspaceFolder}/Drivers/STM32F1xx_HAL_Driver/Inc",
-        "${workspaceFolder}/Drivers/STM32F1xx_HAL_Driver/Inc/Legacy",
-        "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32F1xx/Include",
-        "${workspaceFolder}/Drivers/CMSIS/Include",
-        "${workspaceFolder}/Inc",
-        "${workspaceFolder}/Src"
-      ],
-      "defines": [
-        "_DEBUG",
-        "UNICODE",
-        "_UNICODE"
-      ],
-      "compilerPath": "C:/Program Files (x86)/GNU Tools Arm Embedded/9 2019-q4-major/bin/arm-none-eabi-gcc",
-      "compilerArgs": [
-        "-g",
-        "-mcpu=cortex-m7",
-        "-mthumb",
-        "-mfpu=fpv5-d16",
-        "-mfloat-abi=hard"
-      ],
-      "cStandard": "gnu17",
-      "cppStandard": "gnu++14",
-      "intelliSenseMode": "windows-gcc-x64"
-    },
-    {
-      "name": "STM32",
-      "includePath": [
-        "Drivers/CMSIS/Device/ST/STM32F1xx/Include",
-        "Drivers/CMSIS/Include",
-        "Drivers/STM32F1xx_HAL_Driver/Inc",
-        "Drivers/STM32F1xx_HAL_Driver/Inc/Legacy",
-        "Inc",
-        "Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2",
-        "Middlewares/Third_Party/FreeRTOS/Source/include",
-        "Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM3"
-      ],
-      "defines": [
-        "STM32F103xB",
-        "USE_HAL_DRIVER"
-      ],
-      "compilerPath": "C:\\PROGRAM FILES (X86)\\GNU TOOLS ARM EMBEDDED\\9 2019-Q4-MAJOR\\BIN\\ARM-NONE-EABI-GCC.EXE"
-    }
-  ],
-  "version": 4
+    "configurations": [
+        {
+            "name": "PlatformIO",
+            "includePath": [
+                "c:/code/BlackWidowFreeRTOS/include",
+                "c:/code/BlackWidowFreeRTOS/src",
+                "c:/code/BlackWidowFreeRTOS/lib/hal/include",
+                "c:/code/BlackWidowFreeRTOS/lib/hal/src",
+                "c:/code/BlackWidowFreeRTOS/lib/FreeRTOS/include",
+                "c:/code/BlackWidowFreeRTOS/lib/FreeRTOS",
+                "c:/code/BlackWidowFreeRTOS/lib/FreeRTOS/portable/GCC/ARM_CM3",
+                "C:/Users/Brandon/.platformio/packages/framework-cmsis/CMSIS/Include",
+                "C:/Users/Brandon/.platformio/packages/framework-cmsis-stm32f1/Include",
+                ""
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "c:/code/BlackWidowFreeRTOS/include",
+                    "c:/code/BlackWidowFreeRTOS/src",
+                    "c:/code/BlackWidowFreeRTOS/lib/hal/include",
+                    "c:/code/BlackWidowFreeRTOS/lib/hal/src",
+                    "c:/code/BlackWidowFreeRTOS/lib/FreeRTOS/include",
+                    "c:/code/BlackWidowFreeRTOS/lib/FreeRTOS",
+                    "c:/code/BlackWidowFreeRTOS/lib/FreeRTOS/portable/GCC/ARM_CM3",
+                    "C:/Users/Brandon/.platformio/packages/framework-cmsis/CMSIS/Include",
+                    "C:/Users/Brandon/.platformio/packages/framework-cmsis-stm32f1/Include",
+                    ""
+                ]
+            },
+            "defines": [
+                "PLATFORMIO=50204",
+                "STM32F103xB",
+                "STM32F1",
+                "F_CPU=72000000L",
+                ""
+            ],
+            "compilerPath": "C:/Users/Brandon/.platformio/packages/toolchain-gccarmnoneeabi/bin/arm-none-eabi-gcc.exe",
+            "compilerArgs": [
+                "-mthumb",
+                "-mcpu=cortex-m3",
+                ""
+            ]
+        }
+    ],
+    "version": 4
 }
