@@ -8,6 +8,8 @@
 #include "device.h"
 
 #define DYNAMIXEL_HEADER 0xFFFFFD00
+#define LOBYTE(w) ((uint8_t)(((uint64_t)(w)) & 0xff))
+#define HIBYTE(w) ((uint8_t)((((uint64_t)(w)) >> 8) & 0xff))
 
 typedef enum {
     UNDEFINED = 0x00,
@@ -66,6 +68,7 @@ void transmit_message(uint8_t *, uint8_t);
 void respond(uint8_t, int);
 int grab_number_of_bytes_L(MessageQueue*, uint8_t);
 int grab_number_of_bytes_B(MessageQueue*, uint8_t);
+uint16_t update_crc(uint16_t, uint8_t*, uint16_t);
 //uint8_t* ping_respond(uint8_t*);
 // uint8_t* read_respond(void);
 // uint8_t* write_respond(void);
