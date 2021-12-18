@@ -15,8 +15,8 @@
                 "c:/code/BlackWidowFreeRTOS/lib/FreeRTOS/include",
                 "c:/code/BlackWidowFreeRTOS/lib/FreeRTOS",
                 "c:/code/BlackWidowFreeRTOS/lib/FreeRTOS/portable/GCC/ARM_CM3",
-                "C:/Users/jhuels/.platformio/packages/framework-cmsis/CMSIS/Include",
-                "C:/Users/jhuels/.platformio/packages/framework-cmsis-stm32f1/Include",
+                "C:/Users/Brandon/.platformio/packages/framework-cmsis/CMSIS/Include",
+                "C:/Users/Brandon/.platformio/packages/framework-cmsis-stm32f1/Include",
                 ""
             ],
             "browse": {
@@ -29,8 +29,8 @@
                     "c:/code/BlackWidowFreeRTOS/lib/FreeRTOS/include",
                     "c:/code/BlackWidowFreeRTOS/lib/FreeRTOS",
                     "c:/code/BlackWidowFreeRTOS/lib/FreeRTOS/portable/GCC/ARM_CM3",
-                    "C:/Users/jhuels/.platformio/packages/framework-cmsis/CMSIS/Include",
-                    "C:/Users/jhuels/.platformio/packages/framework-cmsis-stm32f1/Include",
+                    "C:/Users/Brandon/.platformio/packages/framework-cmsis/CMSIS/Include",
+                    "C:/Users/Brandon/.platformio/packages/framework-cmsis-stm32f1/Include",
                     ""
                 ]
             },
@@ -41,7 +41,7 @@
                 "F_CPU=72000000L",
                 ""
             ],
-            "compilerPath": "C:/Users/jhuels/.platformio/packages/toolchain-gccarmnoneeabi/bin/arm-none-eabi-gcc.exe",
+            "compilerPath": "C:/Users/Brandon/.platformio/packages/toolchain-gccarmnoneeabi/bin/arm-none-eabi-gcc.exe",
             "compilerArgs": [
                 "-mthumb",
                 "-mcpu=cortex-m3",

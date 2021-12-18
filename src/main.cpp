@@ -17,7 +17,7 @@ void dummy_sbrk_caller()
 
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx_utility.h"
-
+#include "stm32f1xx_port_handler.h"
 
 
 
@@ -75,6 +75,8 @@ int main(void)
     MX_DMA_Init();
     MX_I2C2_Init();
     MX_USART1_UART_Init();
+
+    UART_DMA_Init();  
 
     /* Create the queue. */
     xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( uint32_t ) );
