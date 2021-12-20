@@ -20,7 +20,7 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f1xx_utility.h"
+#include "utility.h"
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */

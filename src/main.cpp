@@ -1,7 +1,3 @@
-
-
-// #include "stm32f1xx_port_handler.h"
-
 extern "C" void *_sbrk(int incr);
 void dummy_sbrk_caller() __attribute__((__used__));
 void dummy_sbrk_caller()
@@ -16,8 +12,8 @@ void dummy_sbrk_caller()
 #include <cstdio>
 
 #include "stm32f1xx_hal.h"
-#include "stm32f1xx_utility.h"
-#include "stm32f1xx_port_handler.h"
+#include "utility.h"
+#include "port_handler.h"
 
 
 
@@ -56,6 +52,7 @@ the queue empty. */
  */
 static void prvQueueReceiveTask( void *pvParameters );
 static void prvQueueSendTask( void *pvParameters );
+static void prvProcessMessageTask( void *pvParameters );
 
 /*-----------------------------------------------------------*/
 
@@ -85,34 +82,21 @@ int main(void)
     {
         /* Start the two tasks as described in the comments at the top of this
         file. */
-        xTaskCreate( prvQueueReceiveTask,               /* The function that implements the task. */
-                    "Rx",                               /* The text name assigned to the task - for debug only as it is not used by the kernel. */
-                    configMINIMAL_STACK_SIZE,           /* The size of the stack to allocate to the task. */
-                    NULL,                               /* The parameter passed to the task - not used in this case. */
-                    mainQUEUE_RECEIVE_TASK_PRIORITY,    /* The priority assigned to the task. */
-                    NULL );                             /* The task handle is not required, so NULL is passed. */
+        // xTaskCreate( prvQueueReceiveTask,               /* The function that implements the task. */
+        //             "Rx",                               /* The text name assigned to the task - for debug only as it is not used by the kernel. */
+        //             configMINIMAL_STACK_SIZE,           /* The size of the stack to allocate to the task. */
+        //             NULL,                               /* The parameter passed to the task - not used in this case. */
+        //             mainQUEUE_RECEIVE_TASK_PRIORITY,    /* The priority assigned to the task. */
+        //             NULL );                             /* The task handle is not required, so NULL is passed. */
 
-        xTaskCreate( prvQueueSendTask, "TX", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_SEND_TASK_PRIORITY, NULL );
+        // xTaskCreate( prvQueueSendTask, "TX", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_SEND_TASK_PRIORITY, NULL );
 
+        xTaskCreate( prvProcessMessageTask, "RX", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_SEND_TASK_PRIORITY, NULL );
+        
         /* Start the tasks and timer running. */
         vTaskStartScheduler();
     }
 
-  //  UART_DMA_Init(huart1);
-
-//    osKernelInitialize();
-
-    // //faultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
-
-    // osThreadNew(vBLINKY_TASK, NULL, NULL);
-    // osThreadNew(vMESSAGE_FACTORY_TASK, NULL, NULL);
-
-    // if (osKernelGetState() == osKernelReady) {
-    // osKernelStart();                    // Start thread execution
-    // }
-    /* We should never get here as control is now taken by the scheduler */
-    /* Infinite loop */
-    /* USER CODE BEGIN WHILE */
     while (1)
     {
 
@@ -120,18 +104,12 @@ int main(void)
     /* USER CODE END 3 */
 }
 
-void prvBlinkyTask(void * argument) {
-    for(;;) {
-        HAL_GPIO_TogglePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin);
-        //osDelay(500);
-    }		
+static void prvProcessMessageTask( void *pvParameters )
+{
+
 }
 
-void vMESSAGE_FACTORY_TASK(void * argument) {
-	for(;;) {
-		
-	}		
-}
+/*-----------------------------------------------------------*/
 
 static void prvQueueSendTask( void *pvParameters )
 {

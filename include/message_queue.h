@@ -2,7 +2,7 @@
 #define MESSAGE_QUEUE_H
 
 
-#include "stm32f1xx_utility.h"
+#include "utility.h"
 
 #define HAL_BUFFER_SIZE 255
 

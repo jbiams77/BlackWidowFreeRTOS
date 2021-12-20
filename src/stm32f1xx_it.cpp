@@ -19,7 +19,7 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f1xx_utility.h"
+#include "utility.h"
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */

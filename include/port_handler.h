@@ -1,7 +1,7 @@
-#ifndef __STM32F1xx_PORT_HANDLER_H
-#define __STM32F1xx_PORT_HANDLER_H
+#ifndef __PORT_HANDLER_H
+#define __PORT_HANDLER_H
 
-#include "stm32f1xx_utility.h"
+#include "utility.h"
 #include "stm32f1xx_hal.h"
 #include "message_queue.h"
 
@@ -24,4 +24,4 @@ uint32_t get_header(UART_HandleTypeDef *huart);
 void UART_rx_transfer_to_queue(UART_HandleTypeDef *huart);
 
 
-#endif /* __STM32F1xx_PORT_HANDLER_H */
+#endif /* __PORT_HANDLER_H */
