@@ -2,9 +2,6 @@
 
 /* Local variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c2;
-UART_HandleTypeDef huart1;
-DMA_HandleTypeDef hdma_usart1_rx;
-DMA_HandleTypeDef hdma_usart1_tx;
 
 /**
   * @brief System Clock Configuration
@@ -82,7 +79,7 @@ void MX_I2C2_Init(void)
   * @param None
   * @retval None
   */
-void MX_USART1_UART_Init(void)
+void MX_USART1_UART_Init(UART_HandleTypeDef *huart)
 {
 
   /* USER CODE BEGIN USART1_Init 0 */
@@ -92,15 +89,15 @@ void MX_USART1_UART_Init(void)
   /* USER CODE BEGIN USART1_Init 1 */
 
   /* USER CODE END USART1_Init 1 */
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
+  huart->Instance = USART1;
+  huart->Init.BaudRate = 115200;
+  huart->Init.WordLength = UART_WORDLENGTH_8B;
+  huart->Init.StopBits = UART_STOPBITS_1;
+  huart->Init.Parity = UART_PARITY_NONE;
+  huart->Init.Mode = UART_MODE_TX_RX;
+  huart->Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart->Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(huart) != HAL_OK)
   {
     Error_Handler();
   }

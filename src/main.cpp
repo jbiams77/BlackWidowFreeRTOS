@@ -10,26 +10,12 @@ void dummy_sbrk_caller()
 #include <task.h>
 #include <queue.h>
 #include <cstdio>
-
+#include <stdio.h>
+#include <string.h>
 #include "stm32f1xx_hal.h"
 #include "utility.h"
 #include "port_handler.h"
-
-
-
-extern UART_HandleTypeDef huart1;
-
-void vBLINKY_TASK(void * argument);
-void vMESSAGE_FACTORY_TASK(void * argument);
-
-/* Definitions for defaultTask */
-// osThreadId_t defaultTaskHandle;
-// const osThreadAttr_t defaultTask_attributes = {
-//   .name = "defaultTask",
-//   .stack_size = 128 * 4,
-//   .priority = (osPriority_t) osPriorityNormal,
-// };
-
+#include "packet_handler.h"
 
 
 /* Priorities at which the tasks are created. */
@@ -43,22 +29,26 @@ to ticks using the portTICK_PERIOD_MS constant. */
 /* The number of items the queue can hold.  This is 1 as the receive task
 will remove items as they are added, meaning the send task should always find
 the queue empty. */
-#define mainQUEUE_LENGTH                    ( 1 )
+#define mainQUEUE_LENGTH                    ( 10 )
 
 /*-----------------------------------------------------------*/
+typedef struct Message {
+  char body[20];
+  int count;
+} Message;
 
 /*
  * The tasks as described in the comments at the top of this file.
  */
 static void prvQueueReceiveTask( void *pvParameters );
 static void prvQueueSendTask( void *pvParameters );
-static void prvProcessMessageTask( void *pvParameters );
 
 /*-----------------------------------------------------------*/
 
+
 /* The queue used by both tasks. */
 static QueueHandle_t xQueue = NULL;
-
+UART_HandleTypeDef huart1;
 /**
   * @brief  The application entry point.
   * @retval int
@@ -71,28 +61,30 @@ int main(void)
     MX_GPIO_Init();
     MX_DMA_Init();
     MX_I2C2_Init();
-    MX_USART1_UART_Init();
-
-    UART_DMA_Init();  
+    MX_USART1_UART_Init(&huart1);
 
     /* Create the queue. */
-    xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( uint32_t ) );
+    xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( Message ) );
 
     if( xQueue != NULL )
     {
         /* Start the two tasks as described in the comments at the top of this
         file. */
-        // xTaskCreate( prvQueueReceiveTask,               /* The function that implements the task. */
-        //             "Rx",                               /* The text name assigned to the task - for debug only as it is not used by the kernel. */
-        //             configMINIMAL_STACK_SIZE,           /* The size of the stack to allocate to the task. */
-        //             NULL,                               /* The parameter passed to the task - not used in this case. */
-        //             mainQUEUE_RECEIVE_TASK_PRIORITY,    /* The priority assigned to the task. */
-        //             NULL );                             /* The task handle is not required, so NULL is passed. */
+        xTaskCreate(prvQueueSendTask,
+                    "TX",
+                    configMINIMAL_STACK_SIZE,
+                    NULL,
+                    mainQUEUE_SEND_TASK_PRIORITY,
+                    NULL );
 
-        // xTaskCreate( prvQueueSendTask, "TX", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_SEND_TASK_PRIORITY, NULL );
+        xTaskCreate( prvQueueReceiveTask,               /* The function that implements the task. */
+                    "Rx",                               /* The text name assigned to the task - for debug only as it is not used by the kernel. */
+                    configMINIMAL_STACK_SIZE,           /* The size of the stack to allocate to the task. */
+                    NULL,                               /* The parameter passed to the task - not used in this case. */
+                    mainQUEUE_RECEIVE_TASK_PRIORITY,    /* The priority assigned to the task. */
+                    NULL );                             /* The task handle is not required, so NULL is passed. */
 
-        xTaskCreate( prvProcessMessageTask, "RX", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_SEND_TASK_PRIORITY, NULL );
-        
+
         /* Start the tasks and timer running. */
         vTaskStartScheduler();
     }
@@ -103,14 +95,6 @@ int main(void)
     }
     /* USER CODE END 3 */
 }
-
-static void prvProcessMessageTask( void *pvParameters )
-{
-
-}
-
-/*-----------------------------------------------------------*/
-
 static void prvQueueSendTask( void *pvParameters )
 {
 TickType_t xNextWakeTime;
@@ -118,22 +102,28 @@ const unsigned long ulValueToSend = 100UL;
 
     /* Remove compiler warning about unused parameter. */
     ( void ) pvParameters;
-
     /* Initialise xNextWakeTime - this only needs to be done once. */
     xNextWakeTime = xTaskGetTickCount();
-
-    for( ;; )
+    Message msg;
+    msg.count = 0;
+    while (1)
     {
         /* Place this task in the blocked state until it is time to run again. */
         vTaskDelayUntil( &xNextWakeTime, mainQUEUE_SEND_FREQUENCY_MS );
-
+        
+        strcpy(msg.body, "Hello-World");
+        msg.count += 1;
         /* Send to the queue - causing the queue receive task to unblock and
         toggle the LED.  0 is used as the block time so the sending operation
         will not block - it shouldn't need to block as the queue should always
         be empty at this point in the code. */
-        xQueueSend( xQueue, &ulValueToSend, 0U );
+        if (xQueueSend( xQueue, &msg, 10) != pdTRUE)
+        {
+          Error_Handler();
+        }
     }
 }
+
 /*-----------------------------------------------------------*/
 
 static void prvQueueReceiveTask( void *pvParameters )
@@ -143,22 +133,16 @@ const unsigned long ulExpectedValue = 100UL;
 
     /* Remove compiler warning about unused parameter. */
     ( void ) pvParameters;
-
-    for( ;; )
+    Message rcv_msg;
+    volatile int x = 0;
+    volatile char *body;
+    while (1)
     {
-        /* Wait until something arrives in the queue - this task will block
-        indefinitely provided INCLUDE_vTaskSuspend is set to 1 in
-        FreeRTOSConfig.h. */
-        xQueueReceive( xQueue, &ulReceivedValue, portMAX_DELAY );
-
         /*  To get here something must have been received from the queue, but
         is it the expected value?  If it is, toggle the LED. */
-        if( ulReceivedValue == ulExpectedValue )
+        if(xQueueReceive(xQueue, &rcv_msg, 1) == pdTRUE)
         {
-            /* Toggle LED on pin PF5. */
-            HAL_GPIO_TogglePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin);
-            //PORTF.OUTTGL |= PIN5_bm;
-            ulReceivedValue = 0U;
+          HAL_GPIO_TogglePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin);
         }
     }
 }
