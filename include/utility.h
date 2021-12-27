@@ -1,5 +1,5 @@
-#ifndef __STM32F1xx_UTILITY_H
-#define __STM32F1xx_UTILITY_H
+#ifndef __UTILITY_H
+#define __UTILITY_H
 
 #include "stm32f1xx_hal.h"
 #include <stdint.h>
@@ -27,13 +27,13 @@
 #define DATA_DIR_GPIO_Port GPIOB
 #define HIGH GPIO_PIN_SET
 #define LOW GPIO_PIN_RESET
-
+#define UART_RX__SZ            ( 64 )
 
 void SystemClock_Config(void);
 void MX_GPIO_Init(void);
 void MX_DMA_Init(void);
 void MX_I2C2_Init(void);
-void MX_USART1_UART_Init(void);
+void MX_USART1_UART_Init(UART_HandleTypeDef *huart);
 void Error_Handler(void);
 
-#endif /* __STM32F1xx_UTILITY_H */
+#endif /* __UTILITY_H */
