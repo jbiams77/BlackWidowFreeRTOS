@@ -27,7 +27,7 @@
 #define DATA_DIR_GPIO_Port GPIOB
 #define HIGH GPIO_PIN_SET
 #define LOW GPIO_PIN_RESET
-
+#define UART_RX__SZ            ( 64 )
 
 void SystemClock_Config(void);
 void MX_GPIO_Init(void);

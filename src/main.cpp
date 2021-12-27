@@ -16,7 +16,7 @@ void dummy_sbrk_caller()
 #include "utility.h"
 #include "port_handler.h"
 #include "packet_handler.h"
-
+#include "device.h"
 
 /* Priorities at which the tasks are created. */
 #define mainQUEUE_RECEIVE_TASK_PRIORITY     ( tskIDLE_PRIORITY + 2 )
@@ -30,13 +30,8 @@ to ticks using the portTICK_PERIOD_MS constant. */
 will remove items as they are added, meaning the send task should always find
 the queue empty. */
 #define mainQUEUE_LENGTH       ( 10 )
-#define UART_RX__SZ            ( 64 )
-/*-----------------------------------------------------------*/
 
-typedef struct Message {
-  uint8_t body[UART_RX__SZ];
-  int count;
-} Message;
+/*-----------------------------------------------------------*/
 
 uint8_t rx_buffer[UART_RX__SZ];
 
@@ -54,6 +49,8 @@ void UART_DMA_Init();
 /* The queue used by both tasks. */
 static QueueHandle_t xQueue = NULL;
 UART_HandleTypeDef huart1;
+Device device;
+
 /**
   * @brief  The application entry point.
   * @retval int
@@ -70,7 +67,7 @@ int main(void)
 
     UART_DMA_Init();
     /* Create the queue. */
-    xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( Message ) );
+    xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( rx_buffer ) );
 
     if( xQueue != NULL )
     {
@@ -106,20 +103,21 @@ int main(void)
 
 static void prvQueueReceiveTask( void *pvParameters )
 {
-unsigned long ulReceivedValue;
-const unsigned long ulExpectedValue = 100UL;
 
     /* Remove compiler warning about unused parameter. */
     ( void ) pvParameters;
-    static Message rcv_msg;
+    uint8_t rx_packet[UART_RX__SZ];
+
+
     while (1)
     {
-        /*  To get here something must have been received from the queue, but
-        is it the expected value?  If it is, toggle the LED. */
-        if(xQueueReceive(xQueue, &rcv_msg, portMAX_DELAY) == pdTRUE)
-        {
-          HAL_GPIO_TogglePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin);
-        }
+      /*  To get here something must have been received from the queue, but
+      is it the expected value?  If it is, toggle the LED. */
+      if(xQueueReceive(xQueue, &rx_packet, portMAX_DELAY) == pdTRUE)
+      {
+        HAL_GPIO_TogglePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin);
+        PacketHandler::rxPacket(rx_packet, &device);
+      }
     }
 }
 
@@ -137,9 +135,8 @@ void UART_DMA_Init()
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
-  Message msg;
-  memcpy(msg.body, rx_buffer, UART_RX__SZ); // Copy from DMA (rx_buffer) to msg
-  msg.count = 0;
+  uint8_t packet[UART_RX__SZ];
+  memcpy(packet, rx_buffer, UART_RX__SZ); // Copy from DMA (rx_buffer) to msg
   
   /* xQueueSendFromISR() will set *pxHigherPriorityTaskWoken to pdTRUE if sending
   to the queue caused a task to unblock, and the unblocked task has a priority higher
@@ -151,7 +148,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
   toggle the LED.  0 is used as the block time so the sending operation
   will not block - it shouldn't need to block as the queue should always
   be empty at this point in the code. */
-  if (xQueueSendFromISR(xQueue, &msg, &xHigherPriorityTaskWoken) != pdTRUE)
+  if (xQueueSendFromISR(xQueue, &packet, &xHigherPriorityTaskWoken) != pdTRUE)
   {
     Error_Handler();
   }
