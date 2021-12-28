@@ -12,6 +12,7 @@ void dummy_sbrk_caller()
 #include <cstdio>
 #include <stdio.h>
 #include <string.h>
+#include "control_table.h"
 #include "stm32f1xx_hal.h"
 #include "utility.h"
 #include "port_handler.h"
@@ -66,6 +67,9 @@ int main(void)
     MX_USART1_UART_Init(&huart1);
 
     UART_DMA_Init();
+
+    ControlTable controlTable;
+
     /* Create the queue. */
     xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( rx_buffer ) );
 

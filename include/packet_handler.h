@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include "utility.h"
-#include "device.h"
 
 /* Macro for Control Table Value */
 #define DXL_MAKEWORD(a, b)  ((uint16_t)(((uint8_t)(((uint64_t)(a)) & 0xff)) | ((uint16_t)((uint8_t)(((uint64_t)(b)) & 0xff))) << 8))
