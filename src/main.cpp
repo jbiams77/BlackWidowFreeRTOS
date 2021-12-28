@@ -40,17 +40,19 @@ uint8_t rx_buffer[UART_RX__SZ];
  */
 static void prvQueueReceiveTask( void *pvParameters );
 static void prvQueueSendTask( void *pvParameters );
-
+void UART_Transmit(uint8_t *message, uint8_t size);
 /*-----------------------------------------------------------*/
 
 // TODO: Move these to class when working
 void UART_DMA_Init();
 
 /* The queue used by both tasks. */
-static QueueHandle_t xQueue = NULL;
+static QueueHandle_t rxBufferQueue = NULL;
+static QueueHandle_t txBufferQueue = NULL;
+
 UART_HandleTypeDef huart1;
 Device device;
-
+bool DMA_TRANSMIT_COMPLETE;
 /**
   * @brief  The application entry point.
   * @retval int
@@ -67,18 +69,19 @@ int main(void)
 
     UART_DMA_Init();
     /* Create the queue. */
-    xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( rx_buffer ) );
+    rxBufferQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( rx_buffer ) );
+    txBufferQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( Packet ) );
 
-    if( xQueue != NULL )
+    if( rxBufferQueue != NULL )
     {
         /* Start the two tasks as described in the comments at the top of this
         file. */
-        // xTaskCreate(prvQueueSendTask,
-        //             "TX",
-        //             configMINIMAL_STACK_SIZE,
-        //             NULL,
-        //             mainQUEUE_SEND_TASK_PRIORITY,
-        //             NULL );
+        xTaskCreate(prvQueueSendTask,
+                    "TX",
+                    configMINIMAL_STACK_SIZE,
+                    NULL,
+                    mainQUEUE_SEND_TASK_PRIORITY,
+                    NULL );
 
         xTaskCreate( prvQueueReceiveTask,               /* The function that implements the task. */
                     "Rx",                               /* The text name assigned to the task - for debug only as it is not used by the kernel. */
@@ -113,16 +116,40 @@ static void prvQueueReceiveTask( void *pvParameters )
     {
       /*  To get here something must have been received from the queue, but
       is it the expected value?  If it is, toggle the LED. */
-      if(xQueueReceive(xQueue, &rx_packet, portMAX_DELAY) == pdTRUE)
+      if (xQueueReceive(rxBufferQueue, &rx_packet, portMAX_DELAY) == pdTRUE)
       {
         HAL_GPIO_TogglePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin);
-        PacketHandler::rxPacket(rx_packet, &device);
+        if (PacketHandler::rxPacket(rx_packet, &device) == COMM_SUCCESS)
+        {
+          Packet *packet = PacketHandler::txPacket(rx_packet, &device);
+          xQueueSend(txBufferQueue, &packet, 0);
+        }
+      }
+    }
+}
+
+static void prvQueueSendTask( void *pvParameters )
+{
+
+    /* Remove compiler warning about unused parameter. */
+    ( void ) pvParameters;
+    Packet *packet;
+
+
+    while (1)
+    {
+      /*  To get here something must have been received from the queue, but
+      is it the expected value?  If it is, toggle the LED. */
+      if (xQueueReceive(txBufferQueue, &packet, portMAX_DELAY) == pdTRUE)
+      {
+        UART_Transmit(packet->message, packet->size);
       }
     }
 }
 
 void UART_DMA_Init()
 { 
+  DMA_TRANSMIT_COMPLETE = false;
   // set data direction pin is low
   HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_RESET);
 
@@ -148,9 +175,23 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
   toggle the LED.  0 is used as the block time so the sending operation
   will not block - it shouldn't need to block as the queue should always
   be empty at this point in the code. */
-  if (xQueueSendFromISR(xQueue, &packet, &xHigherPriorityTaskWoken) != pdTRUE)
+  if (xQueueSendFromISR(rxBufferQueue, &packet, &xHigherPriorityTaskWoken) != pdTRUE)
   {
     Error_Handler();
   }
+
+}
+
+void UART_Transmit(uint8_t *message, uint8_t size) {
+
+  DMA_TRANSMIT_COMPLETE = false;  
+  HAL_UART_Transmit_IT(&huart1, message, size);
+  
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
+{
+  
+  DMA_TRANSMIT_COMPLETE = true;
 
 }

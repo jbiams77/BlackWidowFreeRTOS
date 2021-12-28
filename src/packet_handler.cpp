@@ -35,6 +35,10 @@ int PacketHandler::rxPacket(uint8_t *rx_packet, Device *device)
                 result = COMM_RX_CORRUPT;
             }
         }
+        else
+        {
+            result = COMM_RX_NOT_THIS_DEVICE;
+        }
     }
     else
     {
@@ -43,6 +47,11 @@ int PacketHandler::rxPacket(uint8_t *rx_packet, Device *device)
 
 
     return result;
+}
+
+Packet* PacketHandler::txPacket(uint8_t *rx_packet, Device *device)
+{
+    return new Ping(); // TODO: make sure to delete this
 }
 
 unsigned short PacketHandler::updateCRC(uint16_t crc_accum, uint8_t *data_blk_ptr, uint16_t data_blk_size)
@@ -94,4 +103,11 @@ unsigned short PacketHandler::updateCRC(uint16_t crc_accum, uint8_t *data_blk_pt
   }
 
   return crc_accum;
+}
+
+Ping::Ping()
+{
+
+    uint8_t ping[size] = {0xFF, 0xFF, 0xFD, 0x00, 0x01,0x07,0x00,0x55,0x00,0x06,0x04,0x26,0x65,0x5D};
+    this->message = ping;
 }

@@ -27,15 +27,17 @@
 #define INST_BULK_WRITE         147     // 0x93
 
 // Communication Result
-#define COMM_SUCCESS        0       // tx or rx packet communication success
-#define COMM_PORT_BUSY      -1000   // Port is busy (in use)
-#define COMM_TX_FAIL        -1001   // Failed transmit instruction packet
-#define COMM_RX_FAIL        -1002   // Failed get status packet
-#define COMM_TX_ERROR       -2000   // Incorrect instruction packet
-#define COMM_RX_WAITING     -3000   // Now recieving status packet
-#define COMM_RX_TIMEOUT     -3001   // There is no status packet
-#define COMM_RX_CORRUPT     -3002   // Incorrect status packet
-#define COMM_NOT_AVAILABLE  -9000   //
+#define COMM_SUCCESS            0       // tx or rx packet communication success
+#define COMM_PORT_BUSY          -1000   // Port is busy (in use)
+#define COMM_TX_FAIL            -1001   // Failed transmit instruction packet
+#define COMM_RX_FAIL            -1002   // Failed get status packet
+#define COMM_TX_ERROR           -2000   // Incorrect instruction packet
+#define COMM_RX_WAITING         -3000   // Now recieving status packet
+#define COMM_RX_TIMEOUT         -3001   // There is no status packet
+#define COMM_RX_CORRUPT         -3002   // Incorrect status packet
+#define COMM_RX_NOT_THIS_DEVICE -3003   //
+#define COMM_NOT_AVAILABLE      -9000   //
+
 
 ///////////////// for Protocol 2.0 Packet /////////////////
 #define PKT_HEADER0             0
@@ -58,7 +60,19 @@
 #define ERRNUM_DATA_LIMIT       6       // Data limit error
 #define ERRNUM_ACCESS           7       // Access error
 
-///////////////// Self 
+class Packet
+{
+    public:
+        uint8_t *message;
+        uint8_t size;
+};
+
+class Ping : public Packet
+{
+    public:
+        Ping();
+};
+
 class PacketHandler
 {
     private:
@@ -67,5 +81,6 @@ class PacketHandler
     public:
         PacketHandler();
         static int rxPacket(uint8_t *rx_packet, Device *device);
+        static Packet* txPacket(uint8_t *rx_packet, Device *device);
         static unsigned short updateCRC(uint16_t crc_accum, uint8_t *data_blk_ptr, uint16_t data_blk_size);
 }; 
