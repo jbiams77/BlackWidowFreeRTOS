@@ -17,7 +17,6 @@ void dummy_sbrk_caller()
 #include "utility.h"
 #include "port_handler.h"
 #include "packet_handler.h"
-#include "device.h"
 
 /* Priorities at which the tasks are created. */
 #define mainQUEUE_RECEIVE_TASK_PRIORITY     ( tskIDLE_PRIORITY + 2 )
@@ -50,7 +49,6 @@ void UART_DMA_Init();
 /* The queue used by both tasks. */
 static QueueHandle_t xQueue = NULL;
 UART_HandleTypeDef huart1;
-Device device;
 
 /**
   * @brief  The application entry point.
@@ -67,8 +65,6 @@ int main(void)
     MX_USART1_UART_Init(&huart1);
 
     UART_DMA_Init();
-
-    ControlTable controlTable;
 
     /* Create the queue. */
     xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( rx_buffer ) );
@@ -120,7 +116,7 @@ static void prvQueueReceiveTask( void *pvParameters )
       if(xQueueReceive(xQueue, &rx_packet, portMAX_DELAY) == pdTRUE)
       {
         HAL_GPIO_TogglePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin);
-        PacketHandler::rxPacket(rx_packet, &device);
+        PacketHandler::rxPacket(rx_packet);
       }
     }
 }

@@ -65,6 +65,6 @@ class PacketHandler
 
     public:
         PacketHandler();
-        static int rxPacket(uint8_t *rx_packet, Device *device);
+        static int rxPacket(uint8_t *rx_packet);
         static unsigned short updateCRC(uint16_t crc_accum, uint8_t *data_blk_ptr, uint16_t data_blk_size);
 }; 

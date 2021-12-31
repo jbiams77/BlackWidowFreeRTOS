@@ -1,4 +1,5 @@
 #include "packet_handler.h"
+#include "control_table.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -8,7 +9,7 @@ PacketHandler::PacketHandler()
 
 }
 
-int PacketHandler::rxPacket(uint8_t *rx_packet, Device *device)
+int PacketHandler::rxPacket(uint8_t *rx_packet)
 {
     int result = COMM_TX_FAIL;
 
@@ -17,7 +18,7 @@ int PacketHandler::rxPacket(uint8_t *rx_packet, Device *device)
         ( rx_packet[PKT_HEADER1] == 0xFF) && 
         ( rx_packet[PKT_HEADER2] == 0xFD))
     {
-        if (rx_packet[PKT_ID] == device->eeprom.ID)
+        if (rx_packet[PKT_ID] == ControlTable::get(CT::ID))
         {
 
             uint16_t length = DXL_MAKEDWORD(rx_packet[PKT_LENGTH_L], rx_packet[PKT_LENGTH_H]) + PKT_LENGTH_H + 1;
@@ -34,6 +35,11 @@ int PacketHandler::rxPacket(uint8_t *rx_packet, Device *device)
             {
                 result = COMM_RX_CORRUPT;
             }
+
+            // TODO: Do something
+            (void)crc1;
+            (void)crc2;
+            (void)instruction;
         }
     }
     else
