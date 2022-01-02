@@ -1,10 +1,11 @@
 #pragma once
 
-#include "stm32f1xx_hal_flash.h"
-#include <unordered_map>
+#include <cstdint>
 
-enum class CT
-{
+// Defined in linker file
+extern uint8_t __CONTROL_TABLE_START;
+
+enum class CT {
     ModelNumber = 0,
     ModelInformation = 2,
     FirmwareVersion = 6,
@@ -86,129 +87,108 @@ enum class CT
     IndirectData56 = 661
 };
 
-class ControlTable
-{
+// #define __USER_DATA_START 0x0800FC00
+
+class ControlTable {
 
 public:
     static uint64_t get(CT field);
-
-    static void write(CT field, uint64_t value);
+    static void set(CT field, uint64_t value);
+    static void flash();
 
 private:
-    static inline const std::unordered_map<CT, uint8_t> _eepromToBytes = {
-        {CT::ModelNumber, 2},
-        {CT::ModelInformation, 4},
-        {CT::FirmwareVersion, 1},
-        {CT::ID, 1},
-        {CT::BaudRate, 1},
-        {CT::ReturnDelayTime, 1},
-        {CT::DriveMode, 1},
-        {CT::OperatingMode, 1},
-        {CT::SecondaryID, 1},
-        {CT::ProtocolType, 1},
-        {CT::HomingOffset, 4},
-        {CT::MovingThreshold, 4},
-        {CT::TemperatureLimit, 1},
-        {CT::MaxVoltageLimit, 2},
-        {CT::MinVoltageLimit, 2},
-        {CT::PWMLimit, 2},
-        {CT::VelocityLimit, 4},
-        {CT::MaxPositionLimit, 4},
-        {CT::MinPositionLimit, 4},
-        {CT::StartupConfiguration, 1},
-        {CT::Shutdown, 1}
+    struct NonvolatileValues {
+        uint16_t modelNumber; // Readonly
+        uint32_t modelInformation; // Readonly
+        uint8_t firmwareVersion; // Readonly
+        uint8_t ID = 1;
+        uint8_t baudRate = 1;
+        uint8_t returnDelayTime = 250;
+        uint8_t driveMode = 0;
+        uint8_t operatingMode = 3;
+        uint8_t secondaryID = 255;
+        uint8_t protocolType = 2;
+        int32_t homingOffset = 0;
+        uint32_t movingThreshold = 10;
+        uint8_t temperatureLimit = 72;
+        uint16_t maxVoltageLimit = 140;
+        uint16_t minVoltageLimit = 60;
+        uint16_t pwmLimit = 885;
+        uint32_t velocityLimit = 265;
+        uint32_t maxPositionLimit = 4095;
+        uint32_t minPositionLimit = 0;
+        uint8_t startupConfiguration = 0;
+        uint8_t shutdown = 52;
     };
 
-    static inline std::unordered_map<CT, uint64_t> _ramArea = {
-        { CT::TorqueEnable, 0},
-        { CT::LED, 0},
-        { CT::StatusReturnLevel, 0},
-        { CT::RegisteredInstruction, 0},
-        { CT::HardwareErrorStatus, 0},
-        { CT::VelocityIGain, 0},
-        { CT::VelocityPGain, 0},
-        { CT::PositionDGain, 0},
-        { CT::PositionIGain, 0},
-        { CT::PositionPGain, 0},
-        { CT::Feedforward2ndGain, 0},
-        { CT::Feedforward1stGain, 0},
-        { CT::BusWatchdog, 0},
-        { CT::GoalPWM, 0},
-        { CT::GoalVelocity, 0},
-        { CT::ProfileAcceleration, 0},
-        { CT::ProfileVelocity, 0},
-        { CT::GoalPosition, 0},
-        { CT::RealtimeTick, 0},
-        { CT::Moving, 0},
-        { CT::MovingStatus, 0},
-        { CT::PresentPWM, 0},
-        { CT::PresentLoad, 0},
-        { CT::PresentVelocity, 0},
-        { CT::PresentPosition, 0},
-        { CT::VelocityTrajectory, 0},
-        { CT::PositionTrajectory, 0},
-        { CT::PresentInputVoltage, 0},
-        { CT::PresentTemperature, 0},
-        { CT::BackupReady, 0}
+    struct Values {
+        uint8_t torqueEnable;
+        uint8_t LED;
+        uint8_t statusReturnLevel;
+        uint8_t registeredInstruction;
+        uint8_t hardwareErrorStatus;
+        uint16_t velocityIGain;
+        uint16_t velocityPGain;
+        uint16_t positionDGain;
+        uint16_t positionIGain;
+        uint16_t positionPGain;
+        uint16_t feedforward2ndGain;
+        uint16_t feedforward1stGain;
+        uint8_t busWatchdog;
+        uint16_t goalPWM;
+        int32_t goalVelocity;
+        uint32_t profileAcceleration;
+        uint32_t profileVelocity;
+        uint32_t goalPosition;
+        uint16_t realtimeTick;
+        uint8_t moving;
+        uint8_t movingStatus;
+        uint16_t presentPWM;
+        uint16_t presentLoad;
+        uint32_t presentVelocity;
+        uint32_t presentPosition;
+        uint32_t velocityTrajectory;
+        uint32_t positionTrajectory;
+        uint16_t presentInputVoltage;
+        uint8_t presentTemperature;
+        uint8_t backupReady;
+    } ramArea;
+
+    // Copy the struct from _USER_DATA_START
+    static inline uint32_t nvStartAddress = reinterpret_cast<uint32_t>(&__CONTROL_TABLE_START);
+    static inline NonvolatileValues nvValues = *reinterpret_cast<NonvolatileValues*>(nvStartAddress);
+
+    static inline Values values = {
+        // Default values from https://emanual.robotis.com/docs/en/dxl/x/xl430-w250/
+        .torqueEnable = 0,
+        .LED = 0,
+        .statusReturnLevel = 2,
+        .registeredInstruction = 0,
+        .hardwareErrorStatus = 0,
+        .velocityIGain = 1000,
+        .velocityPGain = 100,
+        .positionDGain = 4000,
+        .positionIGain = 0,
+        .positionPGain = 640,
+        .feedforward2ndGain = 0,
+        .feedforward1stGain = 0,
+        .busWatchdog = 0,
+        .goalPWM = 0,
+        .goalVelocity = 0,
+        .profileAcceleration = 0,
+        .profileVelocity = 0,
+        .goalPosition = 0,
+        .realtimeTick = 0,
+        .moving = 0,
+        .movingStatus = 0,
+        .presentPWM = 0,
+        .presentLoad = 0,
+        .presentVelocity = 0,
+        .presentPosition = 0,
+        .velocityTrajectory = 0,
+        .positionTrajectory = 0,
+        .presentInputVoltage = 0,
+        .presentTemperature = 0,
+        .backupReady = 0
     };
-
-    // TODO: Cache all the values so we don't have to write till Flash unless we need to
-    // 43 bytes
-    // struct EEPROMArea
-    // {
-    //     uint16_t modelNumber;  // Readonly
-    //     uint32_t modelInformation; // Readonly
-    //     uint8_t firmwareVersion; // Readonly
-    //     uint8_t ID = 1;
-    //     uint8_t baudRate = 1;
-    //     uint8_t returnDelayTime = 250;
-    //     uint8_t driveMode = 0;
-    //     uint8_t operatingMode = 3;
-    //     uint8_t secondaryID = 255;
-    //     uint8_t protocolType = 2;
-    //     int32_t homingOffset = 0;
-    //     uint32_t movingThreshold = 10;
-    //     uint8_t temperatureLimit = 72;
-    //     uint16_t maxVoltageLimit = 140;
-    //     uint16_t minVoltageLimit = 60;
-    //     uint16_t pwmLimit = 885;
-    //     uint32_t velocityLimit = 265;
-    //     uint32_t maxPositionLimit = 4095;
-    //     uint32_t minPositionLimit = 0;
-    //     uint8_t startupConfiguration = 0;
-    //     uint8_t shutdown = 52;
-    // } eepromArea;
-
-    // struct RAMArea
-    // {
-    //     uint8_t torqueEnable;
-    //     uint8_t LED;
-    //     uint8_t statusReturnLevel;
-    //     uint8_t registeredInstruction;
-    //     uint8_t hardwareErrorStatus;
-    //     uint16_t velocityIGain;
-    //     uint16_t velocityPGain;
-    //     uint16_t positionDGain;
-    //     uint16_t positionIGain;
-    //     uint16_t positionPGain;
-    //     uint16_t feedforward2ndGain;
-    //     uint16_t feedforward1stGain;
-    //     uint8_t busWatchdog;
-    //     uint16_t goalPWM;
-    //     int32_t goalVelocity;
-    //     uint32_t profileAcceleration;
-    //     uint32_t profileVelocity;
-    //     uint32_t goalPosition;
-    //     uint16_t realtimeTick;
-    //     uint8_t moving;
-    //     uint8_t movingStatus;
-    //     uint16_t presentPWM;
-    //     uint16_t presentLoad;
-    //     uint32_t presentVelocity;
-    //     uint32_t presentPosition;
-    //     uint32_t velocityTrajectory;
-    //     uint32_t positionTrajectory;
-    //     uint16_t presentInputVoltage;
-    //     uint8_t presentTemperature;
-    // } ramArea;
 };
