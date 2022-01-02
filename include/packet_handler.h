@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include "utility.h"
-#include "device.h"
 
 /* Macro for Control Table Value */
 #define DXL_MAKEWORD(a, b)  ((uint16_t)(((uint8_t)(((uint64_t)(a)) & 0xff)) | ((uint16_t)((uint8_t)(((uint64_t)(b)) & 0xff))) << 8))
@@ -80,7 +79,7 @@ class PacketHandler
 
     public:
         PacketHandler();
-        static int rxPacket(uint8_t *rx_packet, Device *device);
-        static Packet* txPacket(uint8_t *rx_packet, Device *device);
+        static int rxPacket(uint8_t *rx_packet);
+        static Packet* txPacket(uint8_t *rx_packet, Device *device);        
         static unsigned short updateCRC(uint16_t crc_accum, uint8_t *data_blk_ptr, uint16_t data_blk_size);
 }; 

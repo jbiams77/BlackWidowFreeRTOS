@@ -1,35 +1,34 @@
-extern "C" void *_sbrk(int incr);
+extern "C" void* _sbrk(int incr);
 void dummy_sbrk_caller() __attribute__((__used__));
 void dummy_sbrk_caller()
 {
-  _sbrk(0);
+    _sbrk(0);
 }
 
-
-#include <FreeRTOS.h>
-#include <task.h>
-#include <queue.h>
-#include <cstdio>
-#include <stdio.h>
-#include <string.h>
+#include "control_table.h"
+#include "packet_handler.h"
+#include "port_handler.h"
 #include "stm32f1xx_hal.h"
 #include "utility.h"
-#include "port_handler.h"
-#include "packet_handler.h"
-#include "device.h"
+#include <FreeRTOS.h>
+#include <cstdio>
+#include <queue.h>
+#include <stdio.h>
+#include <string.h>
+#include <task.h>
 
 /* Priorities at which the tasks are created. */
-#define mainQUEUE_RECEIVE_TASK_PRIORITY     ( tskIDLE_PRIORITY + 2 )
-#define mainQUEUE_SEND_TASK_PRIORITY        ( tskIDLE_PRIORITY + 1 )
+#define mainQUEUE_RECEIVE_TASK_PRIORITY (tskIDLE_PRIORITY + 2)
+#define mainQUEUE_SEND_TASK_PRIORITY (tskIDLE_PRIORITY + 1)
 
 /* The rate at which data is sent to the queue.  The 200ms value is converted
 to ticks using the portTICK_PERIOD_MS constant. */
-#define mainQUEUE_SEND_FREQUENCY_MS         ( 200 / portTICK_PERIOD_MS )
+#define mainQUEUE_SEND_FREQUENCY_MS (200 / portTICK_PERIOD_MS)
 
 /* The number of items the queue can hold.  This is 1 as the receive task
 will remove items as they are added, meaning the send task should always find
 the queue empty. */
-#define mainQUEUE_LENGTH       ( 10 )
+#define mainQUEUE_LENGTH (10)
 
 /*-----------------------------------------------------------*/
 
@@ -54,9 +53,9 @@ UART_HandleTypeDef huart1;
 Device device;
 bool DMA_TRANSMIT_COMPLETE;
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
 
@@ -68,6 +67,10 @@ int main(void)
     MX_USART1_UART_Init(&huart1);
 
     UART_DMA_Init();
+
+    ControlTable::set(CT::ID, 1);
+    ControlTable::flash();
+
     /* Create the queue. */
     rxBufferQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( rx_buffer ) );
     txBufferQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( Packet ) );
@@ -83,32 +86,29 @@ int main(void)
                     mainQUEUE_SEND_TASK_PRIORITY,
                     NULL );
 
-        xTaskCreate( prvQueueReceiveTask,               /* The function that implements the task. */
-                    "Rx",                               /* The text name assigned to the task - for debug only as it is not used by the kernel. */
-                    configMINIMAL_STACK_SIZE,           /* The size of the stack to allocate to the task. */
-                    NULL,                               /* The parameter passed to the task - not used in this case. */
-                    mainQUEUE_RECEIVE_TASK_PRIORITY,    /* The priority assigned to the task. */
-                    NULL );                             /* The task handle is not required, so NULL is passed. */
-
+        xTaskCreate(prvQueueReceiveTask, /* The function that implements the task. */
+            "Rx", /* The text name assigned to the task - for debug only as it is not used by the kernel. */
+            configMINIMAL_STACK_SIZE, /* The size of the stack to allocate to the task. */
+            NULL, /* The parameter passed to the task - not used in this case. */
+            mainQUEUE_RECEIVE_TASK_PRIORITY, /* The priority assigned to the task. */
+            NULL); /* The task handle is not required, so NULL is passed. */
 
         /* Start the tasks and timer running. */
         vTaskStartScheduler();
     }
 
-    while (1)
-    {
-
+    while (1) {
     }
     /* USER CODE END 3 */
 }
 
 /*-----------------------------------------------------------*/
 
-static void prvQueueReceiveTask( void *pvParameters )
+static void prvQueueReceiveTask(void* pvParameters)
 {
 
     /* Remove compiler warning about unused parameter. */
-    ( void ) pvParameters;
+    (void)pvParameters;
     uint8_t rx_packet[UART_RX__SZ];
 
 
@@ -119,7 +119,7 @@ static void prvQueueReceiveTask( void *pvParameters )
       if (xQueueReceive(rxBufferQueue, &rx_packet, portMAX_DELAY) == pdTRUE)
       {
         HAL_GPIO_TogglePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin);
-        if (PacketHandler::rxPacket(rx_packet, &device) == COMM_SUCCESS)
+        if (PacketHandler::rxPacket(rx_packet) == COMM_SUCCESS)
         {
           Packet *packet = PacketHandler::txPacket(rx_packet, &device);
           xQueueSend(txBufferQueue, &packet, 0);
@@ -127,6 +127,7 @@ static void prvQueueReceiveTask( void *pvParameters )
       }
     }
 }
+
 
 static void prvQueueSendTask( void *pvParameters )
 {
@@ -158,9 +159,13 @@ void UART_DMA_Init()
     Error_Handler();
   }
 
+    // turn on the UART RX port
+    if (HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, UART_RX__SZ) != HAL_OK) {
+        Error_Handler();
+    }
 }
 
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t Size)
 {
   uint8_t packet[UART_RX__SZ];
   memcpy(packet, rx_buffer, UART_RX__SZ); // Copy from DMA (rx_buffer) to msg
