@@ -57,7 +57,14 @@ int PacketHandler::rxPacket(uint8_t *rx_packet)
 }
 
 uint8_t PacketHandler::txPacket(uint8_t *rx_packet)
-{    
+{
+    switch (rx_packet[PKT_INSTRUCTION]) 
+    {
+        case INST_PING:
+            return pingStatus();
+        default:
+            return COMM_TX_FAIL;
+    }
     return pingStatus();
 }
 
@@ -88,10 +95,8 @@ uint8_t PacketHandler::pingStatus()
     while(DMA_TRANSMIT_COMPLETE != true){};
     HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_RESET);
 
-    return 0;
+    return COMM_SUCCESS;
 }
-
-
 
 unsigned short PacketHandler::updateCRC(uint16_t crc_accum, uint8_t *data_blk_ptr, uint16_t data_blk_size)
 {
