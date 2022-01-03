@@ -37,7 +37,8 @@ uint8_t rx_buffer[UART_RX__SZ];
 /*
  * The tasks as described in the comments at the top of this file.
  */
-static void prvQueueReceiveTask(void* pvParameters);
+static void prvQueueReceiveTask( void *pvParameters );
+// static void prvQueueSendTask( void *pvParameters );
 
 /*-----------------------------------------------------------*/
 
@@ -45,9 +46,12 @@ static void prvQueueReceiveTask(void* pvParameters);
 void UART_DMA_Init();
 
 /* The queue used by both tasks. */
-static QueueHandle_t xQueue = NULL;
+static QueueHandle_t rxBufferQueue = NULL;
+// static QueueHandle_t txBufferQueue = NULL;
+
 UART_HandleTypeDef huart1;
 
+bool DMA_TRANSMIT_COMPLETE;
 /**
  * @brief  The application entry point.
  * @retval int
@@ -68,9 +72,11 @@ int main(void)
     ControlTable::flash();
 
     /* Create the queue. */
-    xQueue = xQueueCreate(mainQUEUE_LENGTH, sizeof(rx_buffer));
+    rxBufferQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( rx_buffer ) );
+    // txBufferQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( uint8_t ) );
 
-    if (xQueue != NULL) {
+    if( rxBufferQueue != NULL )
+    {
         /* Start the two tasks as described in the comments at the top of this
         file. */
         // xTaskCreate(prvQueueSendTask,
@@ -105,43 +111,69 @@ static void prvQueueReceiveTask(void* pvParameters)
     (void)pvParameters;
     uint8_t rx_packet[UART_RX__SZ];
 
-    while (1) {
-        /*  To get here something must have been received from the queue, but
-        is it the expected value?  If it is, toggle the LED. */
-        if (xQueueReceive(xQueue, &rx_packet, portMAX_DELAY) == pdTRUE) {
-            HAL_GPIO_TogglePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin);
-            PacketHandler::rxPacket(rx_packet);
+
+    while (1)
+    {
+      /*  To get here something must have been received from the queue, but
+      is it the expected value?  If it is, toggle the LED. */
+      if (xQueueReceive(rxBufferQueue, &rx_packet, portMAX_DELAY) == pdTRUE)
+      {
+        HAL_GPIO_TogglePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin);
+        if (PacketHandler::rxPacket(rx_packet) == COMM_SUCCESS)
+        {
+          PacketHandler::txPacket(rx_packet);
         }
+      }
     }
 }
 
 void UART_DMA_Init()
-{
-    // set data direction pin is low
-    HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_RESET);
+{ 
+  DMA_TRANSMIT_COMPLETE = false;
+  // set data direction pin is low
+  HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_RESET);
 
-    // turn on the UART RX port
-    if (HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, UART_RX__SZ) != HAL_OK) {
-        Error_Handler();
-    }
+  // turn on the UART RX port
+  if (HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, UART_RX__SZ) != HAL_OK) {
+    Error_Handler();
+  }
+
 }
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t Size)
 {
-    uint8_t packet[UART_RX__SZ];
-    memcpy(packet, rx_buffer, UART_RX__SZ); // Copy from DMA (rx_buffer) to msg
+  uint8_t packet[UART_RX__SZ];
+  memcpy(packet, rx_buffer, UART_RX__SZ); // Copy from DMA (rx_buffer) to msg
+  
+  /* xQueueSendFromISR() will set *pxHigherPriorityTaskWoken to pdTRUE if sending
+  to the queue caused a task to unblock, and the unblocked task has a priority higher
+  than the currently running task. If xQueueSendFromISR() sets this value to pdTRUE
+  then a context switch should be requested before the interrupt is exited. */
+  BaseType_t xHigherPriorityTaskWoken;
+  xHigherPriorityTaskWoken =pdFALSE;
+  /* Send to the queue - causing the queue receive task to unblock and
+  toggle the LED.  0 is used as the block time so the sending operation
+  will not block - it shouldn't need to block as the queue should always
+  be empty at this point in the code. */
+  if (xQueueSendFromISR(rxBufferQueue, &packet, &xHigherPriorityTaskWoken) != pdTRUE)
+  {
+    Error_Handler();
+  }
 
-    /* xQueueSendFromISR() will set *pxHigherPriorityTaskWoken to pdTRUE if sending
-    to the queue caused a task to unblock, and the unblocked task has a priority higher
-    than the currently running task. If xQueueSendFromISR() sets this value to pdTRUE
-    then a context switch should be requested before the interrupt is exited. */
-    BaseType_t xHigherPriorityTaskWoken;
-    xHigherPriorityTaskWoken = pdFALSE;
-    /* Send to the queue - causing the queue receive task to unblock and
-    toggle the LED.  0 is used as the block time so the sending operation
-    will not block - it shouldn't need to block as the queue should always
-    be empty at this point in the code. */
-    if (xQueueSendFromISR(xQueue, &packet, &xHigherPriorityTaskWoken) != pdTRUE) {
-        Error_Handler();
-    }
+}
+
+void UART_Transmit(uint8_t *message, uint8_t size) {
+
+  DMA_TRANSMIT_COMPLETE = false;  
+  HAL_UART_Transmit_IT(&huart1, message, size);
+  
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
+{
+  DMA_TRANSMIT_COMPLETE = true;
+
+  if (HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, UART_RX__SZ) != HAL_OK) {
+    Error_Handler();
+  }
 }

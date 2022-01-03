@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "utility.h"
+#include <array>
 
 /* Macro for Control Table Value */
 #define DXL_MAKEWORD(a, b)  ((uint16_t)(((uint8_t)(((uint64_t)(a)) & 0xff)) | ((uint16_t)((uint8_t)(((uint64_t)(b)) & 0xff))) << 8))
@@ -26,15 +27,17 @@
 #define INST_BULK_WRITE         147     // 0x93
 
 // Communication Result
-#define COMM_SUCCESS        0       // tx or rx packet communication success
-#define COMM_PORT_BUSY      -1000   // Port is busy (in use)
-#define COMM_TX_FAIL        -1001   // Failed transmit instruction packet
-#define COMM_RX_FAIL        -1002   // Failed get status packet
-#define COMM_TX_ERROR       -2000   // Incorrect instruction packet
-#define COMM_RX_WAITING     -3000   // Now recieving status packet
-#define COMM_RX_TIMEOUT     -3001   // There is no status packet
-#define COMM_RX_CORRUPT     -3002   // Incorrect status packet
-#define COMM_NOT_AVAILABLE  -9000   //
+#define COMM_SUCCESS            0       // tx or rx packet communication success
+#define COMM_PORT_BUSY          -1000   // Port is busy (in use)
+#define COMM_TX_FAIL            -1001   // Failed transmit instruction packet
+#define COMM_RX_FAIL            -1002   // Failed get status packet
+#define COMM_TX_ERROR           -2000   // Incorrect instruction packet
+#define COMM_RX_WAITING         -3000   // Now recieving status packet
+#define COMM_RX_TIMEOUT         -3001   // There is no status packet
+#define COMM_RX_CORRUPT         -3002   // Incorrect status packet
+#define COMM_RX_NOT_THIS_DEVICE -3003   //
+#define COMM_NOT_AVAILABLE      -9000   //
+
 
 ///////////////// for Protocol 2.0 Packet /////////////////
 #define PKT_HEADER0             0
@@ -47,6 +50,10 @@
 #define PKT_INSTRUCTION         7
 #define PKT_ERROR               8
 #define PKT_PARAMETER0          8
+#define PKT_PARAMETER1          9
+#define PKT_PARAMETER2          10
+#define PKT_PARAMETER3          11
+#define PKT_PARAMETER4          12
 
 ///////////////// Protocol 2.0 Error bit /////////////////
 #define ERRNUM_RESULT_FAIL      1       // Failed to process the instruction packet.
@@ -57,7 +64,8 @@
 #define ERRNUM_DATA_LIMIT       6       // Data limit error
 #define ERRNUM_ACCESS           7       // Access error
 
-///////////////// Self 
+#define PING_STATUS_LENGTH      14
+
 class PacketHandler
 {
     private:
@@ -66,5 +74,7 @@ class PacketHandler
     public:
         PacketHandler();
         static int rxPacket(uint8_t *rx_packet);
+        static uint8_t txPacket(uint8_t *rx_packet);
+        static uint8_t pingStatus();
         static unsigned short updateCRC(uint16_t crc_accum, uint8_t *data_blk_ptr, uint16_t data_blk_size);
-}; 
+};
