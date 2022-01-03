@@ -65,6 +65,7 @@
 #define ERRNUM_ACCESS           7       // Access error
 
 #define PING_STATUS_LENGTH      14
+#define READ_STATUS_LENGTH      15
 
 class PacketHandler
 {
@@ -75,6 +76,30 @@ class PacketHandler
         PacketHandler();
         static int rxPacket(uint8_t *rx_packet);
         static uint8_t txPacket(uint8_t *rx_packet);
+
+        /**
+         * @brief Instruction to check the existence of a Device and basic information
+         * 
+         *      Parameter 1	Model Number LSB
+         *      Parameter 2	Model Number MSB
+         *      Parameter 3	Version of Firmware         *      
+         * 
+         * @param rx_packet received packet with parameters to inspect
+         * @return uint8_t comm status
+         */
         static uint8_t pingStatus();
+
+        /**
+         * @brief Instruction to read a value from Control Table.
+         * 
+         *      Parameter 1	Low-order byte from the starting address
+         *      Parameter 2	High-order byte from the starting address
+         *      Parameter 3	Low-order byte from the data length (X)
+         *      Parameter 4	High-order byte from the data length (X)
+         * 
+         * @param rx_packet received packet with parameters to inspect
+         * @return uint8_t comm status
+         */
+        static uint8_t readStatus(uint8_t *rx_packet);
         static unsigned short updateCRC(uint16_t crc_accum, uint8_t *data_blk_ptr, uint16_t data_blk_size);
 };

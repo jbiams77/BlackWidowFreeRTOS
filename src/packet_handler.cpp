@@ -62,6 +62,8 @@ uint8_t PacketHandler::txPacket(uint8_t *rx_packet)
     {
         case INST_PING:
             return pingStatus();
+        case INST_READ:
+            return readStatus(rx_packet);
         default:
             return COMM_TX_FAIL;
     }
@@ -79,6 +81,36 @@ uint8_t PacketHandler::pingStatus()
     status_packet[PKT_RESERVED] = 0x00;
     status_packet[PKT_ID] = ControlTable::get(CT::ID);
     status_packet[PKT_LENGTH_L] = 0x07;
+    status_packet[PKT_LENGTH_H] = 0x00;
+    status_packet[PKT_INSTRUCTION] = INST_STATUS;
+    status_packet[PKT_ERROR] = 0x00;
+    status_packet[PKT_PARAMETER1] = DXL_LOBYTE(ControlTable::get(CT::ModelNumber));
+    status_packet[PKT_PARAMETER2] = DXL_HIBYTE(ControlTable::get(CT::ModelNumber));
+    status_packet[PKT_PARAMETER3] = ControlTable::get(CT::FirmwareVersion);
+    unsigned short crc = updateCRC(0, status_packet, PING_STATUS_LENGTH - 2);
+    status_packet[PING_STATUS_LENGTH - 2] = DXL_LOBYTE(crc);
+    status_packet[PING_STATUS_LENGTH - 1] = DXL_HIBYTE(crc);
+    
+    HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_SET);
+    UART_Transmit(status_packet, PING_STATUS_LENGTH);
+    // This should have a watchdog timer
+    while(DMA_TRANSMIT_COMPLETE != true){};
+    HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_RESET);
+
+    return COMM_SUCCESS;
+}
+
+uint8_t PacketHandler::readStatus(uint8_t *rx_packet)
+{
+
+    uint8_t status_packet[PING_STATUS_LENGTH] = {0};
+    
+    status_packet[PKT_HEADER0] = 0xFF;
+    status_packet[PKT_HEADER1] = 0xFF;
+    status_packet[PKT_HEADER2] = 0xFD;
+    status_packet[PKT_RESERVED] = 0x00;
+    status_packet[PKT_ID] = ControlTable::get(CT::ID);
+    status_packet[PKT_LENGTH_L] = 0x08;
     status_packet[PKT_LENGTH_H] = 0x00;
     status_packet[PKT_INSTRUCTION] = INST_STATUS;
     status_packet[PKT_ERROR] = 0x00;
