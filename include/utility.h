@@ -35,5 +35,6 @@ void MX_DMA_Init(void);
 void MX_I2C2_Init(void);
 void MX_USART1_UART_Init(UART_HandleTypeDef *huart);
 void Error_Handler(void);
+void UART_Transmit(uint8_t *message, uint8_t size);
 
 #endif /* __UTILITY_H */

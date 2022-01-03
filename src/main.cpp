@@ -38,8 +38,8 @@ uint8_t rx_buffer[UART_RX__SZ];
  * The tasks as described in the comments at the top of this file.
  */
 static void prvQueueReceiveTask( void *pvParameters );
-static void prvQueueSendTask( void *pvParameters );
-void UART_Transmit(uint8_t *message, uint8_t size);
+// static void prvQueueSendTask( void *pvParameters );
+
 /*-----------------------------------------------------------*/
 
 // TODO: Move these to class when working
@@ -47,10 +47,10 @@ void UART_DMA_Init();
 
 /* The queue used by both tasks. */
 static QueueHandle_t rxBufferQueue = NULL;
-static QueueHandle_t txBufferQueue = NULL;
+// static QueueHandle_t txBufferQueue = NULL;
 
 UART_HandleTypeDef huart1;
-Device device;
+
 bool DMA_TRANSMIT_COMPLETE;
 /**
  * @brief  The application entry point.
@@ -73,18 +73,18 @@ int main(void)
 
     /* Create the queue. */
     rxBufferQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( rx_buffer ) );
-    txBufferQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( Packet ) );
+    // txBufferQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( uint8_t ) );
 
     if( rxBufferQueue != NULL )
     {
         /* Start the two tasks as described in the comments at the top of this
         file. */
-        xTaskCreate(prvQueueSendTask,
-                    "TX",
-                    configMINIMAL_STACK_SIZE,
-                    NULL,
-                    mainQUEUE_SEND_TASK_PRIORITY,
-                    NULL );
+        // xTaskCreate(prvQueueSendTask,
+        //             "TX",
+        //             configMINIMAL_STACK_SIZE,
+        //             NULL,
+        //             mainQUEUE_SEND_TASK_PRIORITY,
+        //             NULL );
 
         xTaskCreate(prvQueueReceiveTask, /* The function that implements the task. */
             "Rx", /* The text name assigned to the task - for debug only as it is not used by the kernel. */
@@ -121,29 +121,8 @@ static void prvQueueReceiveTask(void* pvParameters)
         HAL_GPIO_TogglePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin);
         if (PacketHandler::rxPacket(rx_packet) == COMM_SUCCESS)
         {
-          Packet *packet = PacketHandler::txPacket(rx_packet, &device);
-          xQueueSend(txBufferQueue, &packet, 0);
+          PacketHandler::txPacket(rx_packet);
         }
-      }
-    }
-}
-
-
-static void prvQueueSendTask( void *pvParameters )
-{
-
-    /* Remove compiler warning about unused parameter. */
-    ( void ) pvParameters;
-    Packet *packet;
-
-
-    while (1)
-    {
-      /*  To get here something must have been received from the queue, but
-      is it the expected value?  If it is, toggle the LED. */
-      if (xQueueReceive(txBufferQueue, &packet, portMAX_DELAY) == pdTRUE)
-      {
-        UART_Transmit(packet->message, packet->size);
       }
     }
 }
@@ -159,10 +138,6 @@ void UART_DMA_Init()
     Error_Handler();
   }
 
-    // turn on the UART RX port
-    if (HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, UART_RX__SZ) != HAL_OK) {
-        Error_Handler();
-    }
 }
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t Size)
@@ -196,7 +171,9 @@ void UART_Transmit(uint8_t *message, uint8_t size) {
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
 {
-  
   DMA_TRANSMIT_COMPLETE = true;
 
+  if (HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, UART_RX__SZ) != HAL_OK) {
+    Error_Handler();
+  }
 }

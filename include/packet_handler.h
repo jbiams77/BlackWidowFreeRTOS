@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "utility.h"
+#include <array>
 
 /* Macro for Control Table Value */
 #define DXL_MAKEWORD(a, b)  ((uint16_t)(((uint8_t)(((uint64_t)(a)) & 0xff)) | ((uint16_t)((uint8_t)(((uint64_t)(b)) & 0xff))) << 8))
@@ -49,6 +50,10 @@
 #define PKT_INSTRUCTION         7
 #define PKT_ERROR               8
 #define PKT_PARAMETER0          8
+#define PKT_PARAMETER1          9
+#define PKT_PARAMETER2          10
+#define PKT_PARAMETER3          11
+#define PKT_PARAMETER4          12
 
 ///////////////// Protocol 2.0 Error bit /////////////////
 #define ERRNUM_RESULT_FAIL      1       // Failed to process the instruction packet.
@@ -59,18 +64,7 @@
 #define ERRNUM_DATA_LIMIT       6       // Data limit error
 #define ERRNUM_ACCESS           7       // Access error
 
-class Packet
-{
-    public:
-        uint8_t *message;
-        uint8_t size;
-};
-
-class Ping : public Packet
-{
-    public:
-        Ping();
-};
+#define PING_STATUS_LENGTH      14
 
 class PacketHandler
 {
@@ -80,6 +74,7 @@ class PacketHandler
     public:
         PacketHandler();
         static int rxPacket(uint8_t *rx_packet);
-        static Packet* txPacket(uint8_t *rx_packet, Device *device);        
+        static uint8_t txPacket(uint8_t *rx_packet);
+        static uint8_t pingStatus();
         static unsigned short updateCRC(uint16_t crc_accum, uint8_t *data_blk_ptr, uint16_t data_blk_size);
-}; 
+};
