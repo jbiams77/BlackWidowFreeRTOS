@@ -58,15 +58,15 @@ int PacketHandler::rxPacket(uint8_t *rx_packet)
 
 uint8_t PacketHandler::txPacket(uint8_t *rx_packet)
 {
-    switch (rx_packet[PKT_INSTRUCTION]) 
-    {
-        case INST_PING:
-            return pingStatus();
-        case INST_READ:
-            return readStatus(rx_packet);
-        default:
-            return COMM_TX_FAIL;
-    }
+    // switch (rx_packet[PKT_INSTRUCTION]) 
+    // {
+    //     case INST_PING:
+    //         return pingStatus();
+    //     case INST_READ:
+    //         return readStatus(rx_packet);
+    //     default:
+    //         return COMM_TX_FAIL;
+    // }
     return pingStatus();
 }
 
@@ -104,7 +104,10 @@ uint8_t PacketHandler::readStatus(uint8_t *rx_packet)
 {
 
     uint8_t status_packet[PING_STATUS_LENGTH] = {0};
-    
+
+    // uint16_t start_address = DXL_MAKEDWORD(rx_packet[PKT_PARAMETER2], rx_packet[PKT_PARAMETER1]);
+    // uint16_t data_length = DXL_MAKEDWORD(rx_packet[PKT_PARAMETER4], rx_packet[PKT_PARAMETER3]);
+
     status_packet[PKT_HEADER0] = 0xFF;
     status_packet[PKT_HEADER1] = 0xFF;
     status_packet[PKT_HEADER2] = 0xFD;
