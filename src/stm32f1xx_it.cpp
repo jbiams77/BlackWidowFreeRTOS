@@ -212,8 +212,10 @@ void USART1_IRQHandler(void)
 {
   HAL_UART_IRQHandler(&huart1);
   
-  if(__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE)) {
+  if((huart1.Instance->CR1 & (0x10)) == 0x10){
     __HAL_UART_CLEAR_IDLEFLAG(&huart1);
+    uint16_t temp_cr1 = huart1.Instance->CR1;
+		huart1.Instance->CR1 = (temp_cr1 & 0xFFEF);
     HAL_UART_RxCpltCallback(&huart1);
   }
 }
