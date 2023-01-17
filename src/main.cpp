@@ -44,6 +44,7 @@ static void prvQueueReceiveTask( void *pvParameters );
 
 // TODO: Move these to class when working
 void UART_DMA_Init();
+void resetUARTtoReceive();
 
 /* The queue used by both tasks. */
 static QueueHandle_t rxBufferQueue = NULL;
@@ -68,8 +69,12 @@ int main(void)
 
     UART_DMA_Init();
 
-    ControlTable::set(CT::ID, 1);
-    ControlTable::flash();
+    // ControlTable::set(CT::ID, 2);
+    // ControlTable::flash();
+
+    // ControlTable::initialize_memory();
+    // ControlTable::flash();
+    ControlTable::load_memory();
 
     /* Create the queue. */
     rxBufferQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( rx_buffer ) );
@@ -121,7 +126,12 @@ static void prvQueueReceiveTask(void* pvParameters)
             HAL_GPIO_TogglePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin);
             if (PacketHandler::rxPacket(rx_packet) == COMM_SUCCESS)
             {
-            PacketHandler::txPacket(rx_packet);
+                
+                PacketHandler::txPacket(rx_packet);
+            }
+            else
+            {
+                resetUARTtoReceive();
             }
         }
     }
@@ -160,27 +170,21 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart)
         Error_Handler();
     }
 
-    // Re-Enable Idle Interrupt and UART->DMA Interrupt
-    __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
-    if (HAL_UART_Receive_DMA(&huart1, rx_buffer, UART_RX__SZ) != HAL_OK) {
-        Error_Handler();
-    }
-
 }
 
-void UART_Transmit(uint8_t *message, uint8_t size) {
-
-    DMA_TRANSMIT_COMPLETE = false;  
-    HAL_UART_Transmit_IT(&huart1, message, size);
-
-}
-
-
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart)
+void UART_Transmit(uint8_t *message, uint8_t size)
 {
-    DMA_TRANSMIT_COMPLETE = true;
 
-    if (HAL_UARTEx_ReceiveToIdle_DMA(&huart1, rx_buffer, UART_RX__SZ) != HAL_OK) {
+    HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_SET);
+    if(HAL_UART_Transmit(&huart1, message, size, 1000) != HAL_OK) {
         Error_Handler();
     }
+    HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_RESET);
+    resetUARTtoReceive();
+}
+
+void resetUARTtoReceive()
+{
+    __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
+    while (HAL_UART_Receive_DMA(&huart1, rx_buffer, UART_RX__SZ) != HAL_BUSY) {}
 }

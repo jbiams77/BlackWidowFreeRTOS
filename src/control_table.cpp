@@ -2,274 +2,214 @@
 #include <cstring>
 #include <stm32f1xx_hal_flash.h>
 
-uint64_t ControlTable::get(CT field)
+volatile uint8_t ramArea[RAM_AREA_LENGTH] = {0};
+
+/**
+ * @brief Initialize Memory to factory defaults. This is only called when
+ * no values have been initialized (first boot) or when the factory reset command
+ * was sent over communication protocol.
+ * 
+ * @return ** void 
+ */
+void ControlTable::initialize_memory()
+{
+    ControlTable::set(MODEL_NUMBER, 1060);
+    ControlTable::set(MODEL_INFORMATION, 0);
+    ControlTable::set(FIRMWARE_VERSION, 43);
+    ControlTable::set(ID_POS, 2);
+    ControlTable::set(BAUD_RATE, 2);
+    ControlTable::set(RETURN_DELAY_TIME, 250);
+    ControlTable::set(DRIVE_MODE, 0);
+    ControlTable::set(OPERATING_MODE, 3);
+    ControlTable::set(SECONDARY_ID, 255);
+    ControlTable::set(HOMING_OFFSET, 0);
+    ControlTable::set(MOVING_THRESHOLD, 10);
+    ControlTable::set(TEMPERATURE_LIMIT, 72);
+    ControlTable::set(MAX_VOLTAGE_LIMIT, 140);
+    ControlTable::set(MIN_VOLTAGE_LIMIT, 60);
+    ControlTable::set(PWM_LIMIT, 885);
+    ControlTable::set(VELOCITY_LIMIT, 265);
+    ControlTable::set(MAX_POSITION_LIMIT, 4095);
+    ControlTable::set(MIN_POSITION_LIMIT, 0);
+    ControlTable::set(STARTUP_CONFIGURATION, 0);
+    ControlTable::set(SHUTDOWN, 52);
+}
+
+void ControlTable::load_memory()
+{
+    // load nonvolatile memory into memory
+    ramArea[MODEL_NUMBER] = DXL_HIBYTE(ControlTable::get_nonvolatile(MODEL_NUMBER));
+    ramArea[MODEL_NUMBER + 1] = DXL_LOBYTE(ControlTable::get_nonvolatile(MODEL_NUMBER));
+    ramArea[MODEL_INFORMATION] = ControlTable::get_nonvolatile(MODEL_INFORMATION);
+    ramArea[FIRMWARE_VERSION] = ControlTable::get_nonvolatile(FIRMWARE_VERSION);
+    ramArea[ID_POS] = ControlTable::get_nonvolatile(ID_POS);
+    ramArea[BAUD_RATE] = ControlTable::get_nonvolatile(BAUD_RATE);
+    ramArea[RETURN_DELAY_TIME] = ControlTable::get_nonvolatile(RETURN_DELAY_TIME);
+    ramArea[DRIVE_MODE] = ControlTable::get_nonvolatile(DRIVE_MODE);
+    ramArea[OPERATING_MODE] = ControlTable::get_nonvolatile(OPERATING_MODE);
+    ramArea[SECONDARY_ID] = ControlTable::get_nonvolatile(SECONDARY_ID);
+    ramArea[PROTOCOL_TYPE] = ControlTable::get_nonvolatile(PROTOCOL_TYPE);
+    ramArea[HOMING_OFFSET] = ControlTable::get_nonvolatile(HOMING_OFFSET);
+    ramArea[MOVING_THRESHOLD] = DXL_LOBYTE(ControlTable::get_nonvolatile(MOVING_THRESHOLD));
+    ramArea[MOVING_THRESHOLD + 1] = DXL_HIBYTE(ControlTable::get_nonvolatile(MOVING_THRESHOLD));
+    ramArea[MOVING_THRESHOLD + 2] = DXL_3BYTE(ControlTable::get_nonvolatile(MOVING_THRESHOLD));
+    ramArea[MOVING_THRESHOLD + 3] = DXL_4BYTE(ControlTable::get_nonvolatile(MOVING_THRESHOLD));
+    ramArea[TEMPERATURE_LIMIT] = ControlTable::get_nonvolatile(TEMPERATURE_LIMIT);
+    ramArea[MAX_VOLTAGE_LIMIT] = DXL_LOBYTE(ControlTable::get_nonvolatile(MAX_VOLTAGE_LIMIT));
+    ramArea[MAX_VOLTAGE_LIMIT + 1] = DXL_HIBYTE(ControlTable::get_nonvolatile(MAX_VOLTAGE_LIMIT));
+    ramArea[MIN_VOLTAGE_LIMIT] = DXL_LOBYTE(ControlTable::get_nonvolatile(MIN_VOLTAGE_LIMIT));
+    ramArea[MIN_VOLTAGE_LIMIT + 1] = DXL_HIBYTE(ControlTable::get_nonvolatile(MIN_VOLTAGE_LIMIT));
+    ramArea[PWM_LIMIT] = DXL_LOBYTE(ControlTable::get_nonvolatile(PWM_LIMIT));
+    ramArea[PWM_LIMIT + 1] = DXL_HIBYTE(ControlTable::get_nonvolatile(PWM_LIMIT));
+    ramArea[VELOCITY_LIMIT] =     DXL_LOBYTE(ControlTable::get_nonvolatile(VELOCITY_LIMIT));
+    ramArea[VELOCITY_LIMIT + 1] = DXL_HIBYTE(ControlTable::get_nonvolatile(VELOCITY_LIMIT));
+    ramArea[VELOCITY_LIMIT + 2] = DXL_3BYTE(ControlTable::get_nonvolatile(VELOCITY_LIMIT));
+    ramArea[VELOCITY_LIMIT + 3] = DXL_4BYTE(ControlTable::get_nonvolatile(VELOCITY_LIMIT));
+    ramArea[MAX_POSITION_LIMIT] = ControlTable::get_nonvolatile(MAX_POSITION_LIMIT);
+    ramArea[MAX_POSITION_LIMIT + 1] = DXL_HIBYTE(ControlTable::get_nonvolatile(MAX_POSITION_LIMIT));
+    ramArea[MIN_POSITION_LIMIT] = DXL_LOBYTE(ControlTable::get_nonvolatile(MIN_POSITION_LIMIT));
+    ramArea[MIN_POSITION_LIMIT + 1] = DXL_HIBYTE(ControlTable::get_nonvolatile(MIN_POSITION_LIMIT));
+    ramArea[MIN_POSITION_LIMIT + 2] = DXL_3BYTE(ControlTable::get_nonvolatile(MIN_POSITION_LIMIT));
+    ramArea[MIN_POSITION_LIMIT + 3] = DXL_4BYTE(ControlTable::get_nonvolatile(MIN_POSITION_LIMIT));
+    
+    ramArea[STARTUP_CONFIGURATION] = ControlTable::get_nonvolatile(STARTUP_CONFIGURATION);
+    ramArea[SHUTDOWN] = ControlTable::get_nonvolatile(SHUTDOWN);
+    // Initialize remaining memory
+    ramArea[TORQUE_ENABLE] = 0;
+    ramArea[LED] = 1;
+    ramArea[STATUS_RETURN_LEVEL] = 2;
+    ramArea[REGISTERED_INSTRUCTION] = 0;
+    ramArea[HARDWARE_ERROR_STATUS] = 0;
+    // initialize to 1000 or 0x03E8
+    ramArea[VELOCITY_I_GAIN] = 0xE8;
+    ramArea[VELOCITY_I_GAIN + 1] = 0x03;
+    // initialize to 100 or 0x0064
+    ramArea[VELOCITY_P_GAIN] = 0x64;
+    // initialize to 4000 or 0x0FA0
+    ramArea[POSITION_D_GAIN] = 0xA0;
+    ramArea[POSITION_D_GAIN + 1] = 0x0F;
+    // initialize to 640 or 0x0280
+    ramArea[POSITION_P_GAIN] = 0x0280;
+}
+
+uint64_t ControlTable::get_nonvolatile(uint8_t field)
 {
     switch (field) {
     // Flash values
-    case CT::ModelNumber:
+    case MODEL_NUMBER:
         return static_cast<uint64_t>(nvValues.modelNumber);
-    case CT::ModelInformation:
+    case MODEL_INFORMATION:
         return static_cast<uint64_t>(nvValues.modelInformation);
-    case CT::FirmwareVersion:
+    case FIRMWARE_VERSION:
         return static_cast<uint64_t>(nvValues.firmwareVersion);
-    case CT::ID:
+    case ID_POS:
         return static_cast<uint64_t>(nvValues.ID);
-    case CT::BaudRate:
+    case BAUD_RATE:
         return static_cast<uint64_t>(nvValues.baudRate);
-    case CT::ReturnDelayTime:
+    case RETURN_DELAY_TIME:
         return static_cast<uint64_t>(nvValues.returnDelayTime);
-    case CT::DriveMode:
+    case DRIVE_MODE:
         return static_cast<uint64_t>(nvValues.driveMode);
-    case CT::OperatingMode:
+    case OPERATING_MODE:
         return static_cast<uint64_t>(nvValues.operatingMode);
-    case CT::SecondaryID:
+    case SECONDARY_ID:
         return static_cast<uint64_t>(nvValues.secondaryID);
-    case CT::ProtocolType:
+    case PROTOCOL_TYPE:
         return static_cast<uint64_t>(nvValues.protocolType);
-    case CT::HomingOffset:
+    case HOMING_OFFSET:
         return static_cast<uint64_t>(nvValues.homingOffset);
-    case CT::MovingThreshold:
+    case MOVING_THRESHOLD:
         return static_cast<uint64_t>(nvValues.movingThreshold);
-    case CT::TemperatureLimit:
+    case TEMPERATURE_LIMIT:
         return static_cast<uint64_t>(nvValues.temperatureLimit);
-    case CT::MaxVoltageLimit:
+    case MAX_VOLTAGE_LIMIT:
         return static_cast<uint64_t>(nvValues.maxVoltageLimit);
-    case CT::MinVoltageLimit:
+    case MIN_VOLTAGE_LIMIT:
         return static_cast<uint64_t>(nvValues.minVoltageLimit);
-    case CT::PWMLimit:
+    case PWM_LIMIT:
         return static_cast<uint64_t>(nvValues.pwmLimit);
-    case CT::VelocityLimit:
+    case VELOCITY_LIMIT:
         return static_cast<uint64_t>(nvValues.velocityLimit);
-    case CT::MaxPositionLimit:
+    case MAX_POSITION_LIMIT:
         return static_cast<uint64_t>(nvValues.maxPositionLimit);
-    case CT::MinPositionLimit:
+    case MIN_POSITION_LIMIT:
         return static_cast<uint64_t>(nvValues.minPositionLimit);
-    case CT::StartupConfiguration:
+    case STARTUP_CONFIGURATION:
         return static_cast<uint64_t>(nvValues.startupConfiguration);
-    case CT::Shutdown:
+    case SHUTDOWN:
         return static_cast<uint64_t>(nvValues.shutdown);
-
-    // RAM Values
-    case CT::TorqueEnable:
-        return static_cast<uint64_t>(values.torqueEnable);
-    case CT::LED:
-        return static_cast<uint64_t>(values.LED);
-    case CT::StatusReturnLevel:
-        return static_cast<uint64_t>(values.statusReturnLevel);
-    case CT::RegisteredInstruction:
-        return static_cast<uint64_t>(values.registeredInstruction);
-    case CT::HardwareErrorStatus:
-        return static_cast<uint64_t>(values.hardwareErrorStatus);
-    case CT::VelocityIGain:
-        return static_cast<uint64_t>(values.velocityIGain);
-    case CT::VelocityPGain:
-        return static_cast<uint64_t>(values.velocityPGain);
-    case CT::PositionDGain:
-        return static_cast<uint64_t>(values.positionDGain);
-    case CT::PositionIGain:
-        return static_cast<uint64_t>(values.positionIGain);
-    case CT::PositionPGain:
-        return static_cast<uint64_t>(values.positionPGain);
-    case CT::Feedforward2ndGain:
-        return static_cast<uint64_t>(values.feedforward2ndGain);
-    case CT::Feedforward1stGain:
-        return static_cast<uint64_t>(values.feedforward1stGain);
-    case CT::BusWatchdog:
-        return static_cast<uint64_t>(values.busWatchdog);
-    case CT::GoalPWM:
-        return static_cast<uint64_t>(values.goalPWM);
-    case CT::GoalVelocity:
-        return static_cast<uint64_t>(values.goalVelocity);
-    case CT::ProfileAcceleration:
-        return static_cast<uint64_t>(values.profileAcceleration);
-    case CT::ProfileVelocity:
-        return static_cast<uint64_t>(values.profileVelocity);
-    case CT::GoalPosition:
-        return static_cast<uint64_t>(values.goalPosition);
-    case CT::RealtimeTick:
-        return static_cast<uint64_t>(values.realtimeTick);
-    case CT::Moving:
-        return static_cast<uint64_t>(values.moving);
-    case CT::MovingStatus:
-        return static_cast<uint64_t>(values.movingStatus);
-    case CT::PresentPWM:
-        return static_cast<uint64_t>(values.presentPWM);
-    case CT::PresentLoad:
-        return static_cast<uint64_t>(values.presentLoad);
-    case CT::PresentVelocity:
-        return static_cast<uint64_t>(values.presentVelocity);
-    case CT::PresentPosition:
-        return static_cast<uint64_t>(values.presentPosition);
-    case CT::VelocityTrajectory:
-        return static_cast<uint64_t>(values.velocityTrajectory);
-    case CT::PositionTrajectory:
-        return static_cast<uint64_t>(values.positionTrajectory);
-    case CT::PresentInputVoltage:
-        return static_cast<uint64_t>(values.presentInputVoltage);
-    case CT::PresentTemperature:
-        return static_cast<uint64_t>(values.presentTemperature);
-    case CT::BackupReady:
-        return static_cast<uint64_t>(values.backupReady);
     default:
         return 0xDEADBEEF;
     }
 }
 
-void ControlTable::set(CT field, uint64_t value)
+
+
+void ControlTable::set(uint8_t field, uint64_t value)
 {
     switch (field) {
-    case CT::ModelNumber:
+    case MODEL_NUMBER:
         nvValues.modelNumber = value;
         break;
-    case CT::ModelInformation:
+    case MODEL_INFORMATION:
         nvValues.modelInformation = value;
         break;
-    case CT::FirmwareVersion:
+    case FIRMWARE_VERSION:
         nvValues.firmwareVersion = value;
         break;
-    case CT::ID:
+    case ID_POS:
         nvValues.ID = value;
         break;
-    case CT::BaudRate:
+    case BAUD_RATE:
         nvValues.baudRate = value;
         break;
-    case CT::ReturnDelayTime:
+    case RETURN_DELAY_TIME:
         nvValues.returnDelayTime = value;
         break;
-    case CT::DriveMode:
+    case DRIVE_MODE:
         nvValues.driveMode = value;
         break;
-    case CT::OperatingMode:
+    case OPERATING_MODE:
         nvValues.operatingMode = value;
         break;
-    case CT::SecondaryID:
+    case SECONDARY_ID:
         nvValues.secondaryID = value;
         break;
-    case CT::ProtocolType:
+    case PROTOCOL_TYPE:
         nvValues.protocolType = value;
         break;
-    case CT::HomingOffset:
+    case HOMING_OFFSET:
         nvValues.homingOffset = value;
         break;
-    case CT::MovingThreshold:
+    case MOVING_THRESHOLD:
         nvValues.movingThreshold = value;
         break;
-    case CT::TemperatureLimit:
+    case TEMPERATURE_LIMIT:
         nvValues.temperatureLimit = value;
         break;
-    case CT::MaxVoltageLimit:
+    case MAX_VOLTAGE_LIMIT:
         nvValues.maxVoltageLimit = value;
         break;
-    case CT::MinVoltageLimit:
+    case MIN_VOLTAGE_LIMIT:
         nvValues.minVoltageLimit = value;
         break;
-    case CT::PWMLimit:
+    case PWM_LIMIT:
         nvValues.pwmLimit = value;
         break;
-    case CT::VelocityLimit:
+    case VELOCITY_LIMIT:
         nvValues.velocityLimit = value;
         break;
-    case CT::MaxPositionLimit:
+    case MAX_POSITION_LIMIT:
         nvValues.maxPositionLimit = value;
         break;
-    case CT::MinPositionLimit:
+    case MIN_POSITION_LIMIT:
         nvValues.minPositionLimit = value;
         break;
-    case CT::StartupConfiguration:
+    case STARTUP_CONFIGURATION:
         nvValues.startupConfiguration = value;
         break;
-    case CT::Shutdown:
+    case SHUTDOWN:
         nvValues.shutdown = value;
-        break;
-    case CT::TorqueEnable:
-        values.torqueEnable = value;
-        break;
-    case CT::LED:
-        values.LED = value;
-        break;
-    case CT::StatusReturnLevel:
-        values.statusReturnLevel = value;
-        break;
-    case CT::RegisteredInstruction:
-        values.registeredInstruction = value;
-        break;
-    case CT::HardwareErrorStatus:
-        values.hardwareErrorStatus = value;
-        break;
-    case CT::VelocityIGain:
-        values.velocityIGain = value;
-        break;
-    case CT::VelocityPGain:
-        values.velocityPGain = value;
-        break;
-    case CT::PositionDGain:
-        values.positionDGain = value;
-        break;
-    case CT::PositionIGain:
-        values.positionIGain = value;
-        break;
-    case CT::PositionPGain:
-        values.positionPGain = value;
-        break;
-    case CT::Feedforward2ndGain:
-        values.feedforward2ndGain = value;
-        break;
-    case CT::Feedforward1stGain:
-        values.feedforward1stGain = value;
-        break;
-    case CT::BusWatchdog:
-        values.busWatchdog = value;
-        break;
-    case CT::GoalPWM:
-        values.goalPWM = value;
-        break;
-    case CT::GoalVelocity:
-        values.goalVelocity = value;
-        break;
-    case CT::ProfileAcceleration:
-        values.profileAcceleration = value;
-        break;
-    case CT::ProfileVelocity:
-        values.profileVelocity = value;
-        break;
-    case CT::GoalPosition:
-        values.goalPosition = value;
-        break;
-    case CT::RealtimeTick:
-        values.realtimeTick = value;
-        break;
-    case CT::Moving:
-        values.moving = value;
-        break;
-    case CT::MovingStatus:
-        values.movingStatus = value;
-        break;
-    case CT::PresentPWM:
-        values.presentPWM = value;
-        break;
-    case CT::PresentLoad:
-        values.presentLoad = value;
-        break;
-    case CT::PresentVelocity:
-        values.presentVelocity = value;
-        break;
-    case CT::PresentPosition:
-        values.presentPosition = value;
-        break;
-    case CT::VelocityTrajectory:
-        values.velocityTrajectory = value;
-        break;
-    case CT::PositionTrajectory:
-        values.positionTrajectory = value;
-        break;
-    case CT::PresentInputVoltage:
-        values.presentInputVoltage = value;
-        break;
-    case CT::PresentTemperature:
-        values.presentTemperature = value;
-        break;
-    case CT::BackupReady:
-        values.backupReady = value;
         break;
     default:
         return;
