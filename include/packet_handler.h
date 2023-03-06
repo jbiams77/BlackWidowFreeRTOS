@@ -59,6 +59,7 @@
 #define ERRNUM_ACCESS           7       // Access error
 
 #define PING_STATUS_LENGTH      14
+#define WRITE_STATUS_LENGTH      11
 
 class PacketHandler
 {
@@ -71,5 +72,7 @@ class PacketHandler
         static uint8_t txPacket(uint8_t *rx_packet);
         static uint8_t pingStatus();
         static uint8_t readResponse(uint8_t *rx_packet);
+        static uint8_t writeResponse(uint8_t *rx_packet);
+
         static unsigned short updateCRC(uint16_t crc_accum, uint8_t *data_blk_ptr, uint16_t data_blk_size);
 };

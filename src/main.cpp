@@ -69,12 +69,9 @@ int main(void)
 
     UART_DMA_Init();
 
-    // ControlTable::set(CT::ID, 2);
+    // ControlTable::initialize_eeprom();
     // ControlTable::flash();
-
-    // ControlTable::initialize_memory();
-    // ControlTable::flash();
-    ControlTable::load_memory();
+    // ControlTable::load_memory();
 
     /* Create the queue. */
     rxBufferQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( rx_buffer ) );
