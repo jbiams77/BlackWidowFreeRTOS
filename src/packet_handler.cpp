@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <algorithm>
 
-extern bool DMA_TRANSMIT_COMPLETE;
 PacketHandler::PacketHandler()
 {
 
@@ -19,14 +19,13 @@ int PacketHandler::rxPacket(uint8_t *rx_packet)
         ( rx_packet[PKT_HEADER1] == 0xFF) && 
         ( rx_packet[PKT_HEADER2] == 0xFD))
     {
+
         if (rx_packet[PKT_ID] == ControlTable::get(CT::ID))
         {
-
             uint16_t length = DXL_MAKEDWORD(rx_packet[PKT_LENGTH_L], rx_packet[PKT_LENGTH_H]) + PKT_LENGTH_H + 1;
             uint8_t crc1 = rx_packet[length - 2];
             uint8_t crc2 = rx_packet[length - 1];
-            uint16_t crc = DXL_MAKEDWORD(rx_packet[length - 2], rx_packet[length - 1]);
-            uint8_t instruction = rx_packet[PKT_INSTRUCTION];
+            uint16_t crc = DXL_MAKEDWORD(crc1, crc2);
 
             if (updateCRC(0, rx_packet, length - 2) == crc)
             {
@@ -36,11 +35,6 @@ int PacketHandler::rxPacket(uint8_t *rx_packet)
             {
                 result = COMM_RX_CORRUPT;
             }
-
-            // TODO: Do something
-            (void)crc1;
-            (void)crc2;
-            (void)instruction;
         }
         else
         {
@@ -58,15 +52,21 @@ int PacketHandler::rxPacket(uint8_t *rx_packet)
 
 uint8_t PacketHandler::txPacket(uint8_t *rx_packet)
 {
-    switch (rx_packet[PKT_INSTRUCTION]) 
+    uint8_t instruction = rx_packet[PKT_INSTRUCTION];
+    switch (instruction) 
     {
         case INST_PING:
             return pingStatus();
+        case INST_READ:
+            return readResponse(rx_packet);
+        case INST_WRITE:
+            return writeResponse(rx_packet);
         default:
             return COMM_TX_FAIL;
     }
     return pingStatus();
 }
+
 
 uint8_t PacketHandler::pingStatus()
 {
@@ -89,14 +89,111 @@ uint8_t PacketHandler::pingStatus()
     status_packet[PING_STATUS_LENGTH - 2] = DXL_LOBYTE(crc);
     status_packet[PING_STATUS_LENGTH - 1] = DXL_HIBYTE(crc);
     
-    HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_SET);
+    
     UART_Transmit(status_packet, PING_STATUS_LENGTH);
-    // This should have a watchdog timer
-    while(DMA_TRANSMIT_COMPLETE != true){};
-    HAL_GPIO_WritePin(DATA_DIR_GPIO_Port, DATA_DIR_Pin, GPIO_PIN_RESET);
 
     return COMM_SUCCESS;
 }
+
+
+uint8_t PacketHandler::readResponse(uint8_t *rx_packet)
+{
+    int result = COMM_TX_FAIL;
+
+    if (rx_packet == NULL)
+        return result;
+
+    uint16_t address = ((rx_packet[PKT_PARAMETER0]) | (rx_packet[PKT_PARAMETER1] << 4));
+    uint16_t length = ((rx_packet[PKT_PARAMETER2]) | (rx_packet[PKT_PARAMETER3] << 4));
+
+    // recover requested data from memory
+    std::vector<uint8_t> packed_data = ControlTable::recover_data(address, length);
+
+    uint8_t *status_packet  = (uint8_t *)malloc(length + 11);
+
+    status_packet[PKT_HEADER0] = 0xFF;
+    status_packet[PKT_HEADER1] = 0xFF;
+    status_packet[PKT_HEADER2] = 0xFD;
+    status_packet[PKT_RESERVED] = 0x00;
+    status_packet[PKT_ID] = ControlTable::get(CT::ID);
+    status_packet[PKT_LENGTH_L] = DXL_LOBYTE(length + 4);
+    status_packet[PKT_LENGTH_H] = DXL_HIBYTE(length + 4);
+    status_packet[PKT_INSTRUCTION] = INST_STATUS;
+    status_packet[PKT_ERROR] = 0x00;
+
+    volatile uint8_t s = 0;
+    for (uint8_t data : packed_data)
+    {
+        status_packet[PKT_PARAMETER1 + s] = static_cast<uint8_t>(data);
+        s = s + 1;
+    }
+    unsigned short crc = updateCRC(0, status_packet, length + 9);
+    status_packet[length + 9] = DXL_LOBYTE(crc);
+    status_packet[length + 10] = DXL_HIBYTE(crc);
+
+    UART_Transmit(status_packet, length + 11);
+
+    free(status_packet);
+    return COMM_SUCCESS;
+}
+
+
+uint8_t PacketHandler::writeResponse(uint8_t *rx_packet)
+{
+    int result = COMM_TX_FAIL;
+
+    if (rx_packet == NULL)
+        return result;
+
+    uint16_t address = DXL_MAKEWORD(rx_packet[PKT_PARAMETER0], rx_packet[PKT_PARAMETER1]);
+    uint16_t length = DXL_MAKEWORD(rx_packet[PKT_LENGTH_L], rx_packet[PKT_LENGTH_H]) - 5;
+
+    // cannot write tp address 0-63 if torque is on
+    if ((1 == 0x01) && (address <= 63)){
+        result = ERRNUM_ACCESS;
+    }
+
+    // cannot write to addresses 0 - 6
+    if (address <= 6){
+        result = ERRNUM_DATA_RANGE;
+    }
+
+    uint8_t *data  = (uint8_t *)malloc(length + 11);
+
+    for (int i = 0; i < length; i++) {
+        data[i] = rx_packet[10 + i];
+    }
+
+    if(false == ControlTable::write_data_to_memory(address, length, data)){
+        result = ERRNUM_DATA_RANGE;
+    } else {
+        result = COMM_SUCCESS;
+    }
+    
+
+    uint8_t status_packet[WRITE_STATUS_LENGTH] = {0};
+    
+    status_packet[PKT_HEADER0] = 0xFF;
+    status_packet[PKT_HEADER1] = 0xFF;
+    status_packet[PKT_HEADER2] = 0xFD;
+    status_packet[PKT_RESERVED] = 0x00;
+    status_packet[PKT_ID] =  ControlTable::get(CT::ID);
+    status_packet[PKT_LENGTH_L] = 0x04;
+    status_packet[PKT_LENGTH_H] = 0x00;
+    status_packet[PKT_INSTRUCTION] = INST_STATUS;
+    status_packet[PKT_ERROR] = result;
+    unsigned short crc = updateCRC(0, status_packet, WRITE_STATUS_LENGTH - 2);
+    status_packet[WRITE_STATUS_LENGTH - 2] = DXL_LOBYTE(crc);
+    status_packet[WRITE_STATUS_LENGTH - 1] = DXL_HIBYTE(crc);
+
+
+    UART_Transmit(status_packet, PING_STATUS_LENGTH);
+
+    free(data);
+    return COMM_SUCCESS;
+
+}
+
 
 unsigned short PacketHandler::updateCRC(uint16_t crc_accum, uint8_t *data_blk_ptr, uint16_t data_blk_size)
 {

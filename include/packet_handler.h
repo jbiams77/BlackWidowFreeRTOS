@@ -2,13 +2,7 @@
 #include "utility.h"
 #include <array>
 
-/* Macro for Control Table Value */
-#define DXL_MAKEWORD(a, b)  ((uint16_t)(((uint8_t)(((uint64_t)(a)) & 0xff)) | ((uint16_t)((uint8_t)(((uint64_t)(b)) & 0xff))) << 8))
-#define DXL_MAKEDWORD(a, b) ((uint32_t)(((uint16_t)(((uint64_t)(a)) & 0xffff)) | ((uint32_t)((uint16_t)(((uint64_t)(b)) & 0xffff))) << 8))
-#define DXL_LOWORD(l)       ((uint16_t)(((uint64_t)(l)) & 0xffff))
-#define DXL_HIWORD(l)       ((uint16_t)((((uint64_t)(l)) >> 16) & 0xffff))
-#define DXL_LOBYTE(w)       ((uint8_t)(((uint64_t)(w)) & 0xff))
-#define DXL_HIBYTE(w)       ((uint8_t)((((uint64_t)(w)) >> 8) & 0xff))
+
 
 /* Instruction for DXL Protocol */
 #define INST_PING               1
@@ -65,6 +59,7 @@
 #define ERRNUM_ACCESS           7       // Access error
 
 #define PING_STATUS_LENGTH      14
+#define WRITE_STATUS_LENGTH      11
 
 class PacketHandler
 {
@@ -76,5 +71,8 @@ class PacketHandler
         static int rxPacket(uint8_t *rx_packet);
         static uint8_t txPacket(uint8_t *rx_packet);
         static uint8_t pingStatus();
+        static uint8_t readResponse(uint8_t *rx_packet);
+        static uint8_t writeResponse(uint8_t *rx_packet);
+
         static unsigned short updateCRC(uint16_t crc_accum, uint8_t *data_blk_ptr, uint16_t data_blk_size);
 };

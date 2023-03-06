@@ -211,13 +211,22 @@ void TIM1_UP_IRQHandler(void)
 void USART1_IRQHandler(void)
 {
   HAL_UART_IRQHandler(&huart1);
-  
-  if((huart1.Instance->CR1 & (0x10)) == 0x10){
+  // transmit interrupt
+  if((huart1.Instance->CR1 & 0x80) == 0x80){
+    __HAL_UART_CLEAR_PEFLAG(&huart1);
+    uint16_t temp_cr1 = huart1.Instance->CR1;
+    huart1.Instance->CR1 = (temp_cr1 & 0xFE7F);
+    HAL_UART_TxCpltCallback(&huart1);
+  }
+
+  // receive Idle Flag
+  if((huart1.Instance->CR1 & 0x10) == 0x10 && (huart1.Instance->CR3 == 0x00)){
     __HAL_UART_CLEAR_IDLEFLAG(&huart1);
     uint16_t temp_cr1 = huart1.Instance->CR1;
 		huart1.Instance->CR1 = (temp_cr1 & 0xFFEF);
     HAL_UART_RxCpltCallback(&huart1);
   }
+
 }
 
 /* USER CODE BEGIN 1 */

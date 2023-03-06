@@ -2,311 +2,460 @@
 #include <cstring>
 #include <stm32f1xx_hal_flash.h>
 
+std::vector<uint8_t> ControlTable::recover_data(uint16_t offset, uint16_t data_length) {
+    std::vector<uint8_t> packed_data(data_length);
+    uint8_t* packed_data_ptr = packed_data.data();
+
+    // Compute the starting address of the requested data.
+    uint8_t* start_address = reinterpret_cast<uint8_t*>(&ramArea) + offset;
+
+    // Copy the data byte by byte, in little-endian order.
+    for (uint8_t i = 0; i < data_length; ++i) {
+        *packed_data_ptr++ = *(start_address + i);
+    }
+
+    return packed_data;
+}
+
+
+bool ControlTable::write_data_to_memory(uint8_t offset, uint8_t length, const uint8_t* data) {
+    // Compute the starting and ending addresses of the memory area to write to.
+    uint8_t* start_address = reinterpret_cast<uint8_t*>(&ramArea) + offset;
+    uint8_t* end_address = start_address + length;
+
+    // Check if the write operation would exceed the bounds of the memory area.
+    if (end_address > reinterpret_cast<uint8_t*>(&ramArea) + sizeof(Memory)) {
+        return false;
+    }
+
+    // Copy the data byte by byte, in little-endian order.
+    for (uint8_t i = 0; i < length; ++i) {
+        *(start_address + i) = *(data + i);
+    }
+    return true;
+}
+
+
+
 uint64_t ControlTable::get(CT field)
 {
     switch (field) {
     // Flash values
     case CT::ModelNumber:
-        return static_cast<uint64_t>(nvValues.modelNumber);
+        return static_cast<uint64_t>(ramArea.modelNumber);
     case CT::ModelInformation:
-        return static_cast<uint64_t>(nvValues.modelInformation);
+        return static_cast<uint64_t>(ramArea.modelInformation);
     case CT::FirmwareVersion:
-        return static_cast<uint64_t>(nvValues.firmwareVersion);
+        return static_cast<uint64_t>(ramArea.firmwareVersion);
     case CT::ID:
-        return static_cast<uint64_t>(nvValues.ID);
+        return static_cast<uint64_t>(ramArea.ID);
     case CT::BaudRate:
-        return static_cast<uint64_t>(nvValues.baudRate);
+        return static_cast<uint64_t>(ramArea.baudRate);
     case CT::ReturnDelayTime:
-        return static_cast<uint64_t>(nvValues.returnDelayTime);
+        return static_cast<uint64_t>(ramArea.returnDelayTime);
     case CT::DriveMode:
-        return static_cast<uint64_t>(nvValues.driveMode);
+        return static_cast<uint64_t>(ramArea.driveMode);
     case CT::OperatingMode:
-        return static_cast<uint64_t>(nvValues.operatingMode);
+        return static_cast<uint64_t>(ramArea.operatingMode);
     case CT::SecondaryID:
-        return static_cast<uint64_t>(nvValues.secondaryID);
+        return static_cast<uint64_t>(ramArea.secondaryID);
     case CT::ProtocolType:
-        return static_cast<uint64_t>(nvValues.protocolType);
+        return static_cast<uint64_t>(ramArea.protocolType);
     case CT::HomingOffset:
-        return static_cast<uint64_t>(nvValues.homingOffset);
+        return static_cast<uint64_t>(ramArea.homingOffset);
     case CT::MovingThreshold:
-        return static_cast<uint64_t>(nvValues.movingThreshold);
+        return static_cast<uint64_t>(ramArea.movingThreshold);
     case CT::TemperatureLimit:
-        return static_cast<uint64_t>(nvValues.temperatureLimit);
+        return static_cast<uint64_t>(ramArea.temperatureLimit);
     case CT::MaxVoltageLimit:
-        return static_cast<uint64_t>(nvValues.maxVoltageLimit);
+        return static_cast<uint64_t>(ramArea.maxVoltageLimit);
     case CT::MinVoltageLimit:
-        return static_cast<uint64_t>(nvValues.minVoltageLimit);
+        return static_cast<uint64_t>(ramArea.minVoltageLimit);
     case CT::PWMLimit:
-        return static_cast<uint64_t>(nvValues.pwmLimit);
+        return static_cast<uint64_t>(ramArea.pwmLimit);
     case CT::VelocityLimit:
-        return static_cast<uint64_t>(nvValues.velocityLimit);
+        return static_cast<uint64_t>(ramArea.velocityLimit);
     case CT::MaxPositionLimit:
-        return static_cast<uint64_t>(nvValues.maxPositionLimit);
+        return static_cast<uint64_t>(ramArea.maxPositionLimit);
     case CT::MinPositionLimit:
-        return static_cast<uint64_t>(nvValues.minPositionLimit);
+        return static_cast<uint64_t>(ramArea.minPositionLimit);
     case CT::StartupConfiguration:
-        return static_cast<uint64_t>(nvValues.startupConfiguration);
+        return static_cast<uint64_t>(ramArea.startupConfiguration);
     case CT::Shutdown:
-        return static_cast<uint64_t>(nvValues.shutdown);
+        return static_cast<uint64_t>(ramArea.shutdown);
 
     // RAM Values
     case CT::TorqueEnable:
-        return static_cast<uint64_t>(values.torqueEnable);
+        return static_cast<uint64_t>(ramArea.torqueEnable);
     case CT::LED:
-        return static_cast<uint64_t>(values.LED);
+        return static_cast<uint64_t>(ramArea.LED);
     case CT::StatusReturnLevel:
-        return static_cast<uint64_t>(values.statusReturnLevel);
+        return static_cast<uint64_t>(ramArea.statusReturnLevel);
     case CT::RegisteredInstruction:
-        return static_cast<uint64_t>(values.registeredInstruction);
+        return static_cast<uint64_t>(ramArea.registeredInstruction);
     case CT::HardwareErrorStatus:
-        return static_cast<uint64_t>(values.hardwareErrorStatus);
+        return static_cast<uint64_t>(ramArea.hardwareErrorStatus);
     case CT::VelocityIGain:
-        return static_cast<uint64_t>(values.velocityIGain);
+        return static_cast<uint64_t>(ramArea.velocityIGain);
     case CT::VelocityPGain:
-        return static_cast<uint64_t>(values.velocityPGain);
+        return static_cast<uint64_t>(ramArea.velocityPGain);
     case CT::PositionDGain:
-        return static_cast<uint64_t>(values.positionDGain);
+        return static_cast<uint64_t>(ramArea.positionDGain);
     case CT::PositionIGain:
-        return static_cast<uint64_t>(values.positionIGain);
+        return static_cast<uint64_t>(ramArea.positionIGain);
     case CT::PositionPGain:
-        return static_cast<uint64_t>(values.positionPGain);
+        return static_cast<uint64_t>(ramArea.positionPGain);
     case CT::Feedforward2ndGain:
-        return static_cast<uint64_t>(values.feedforward2ndGain);
+        return static_cast<uint64_t>(ramArea.feedforward2ndGain);
     case CT::Feedforward1stGain:
-        return static_cast<uint64_t>(values.feedforward1stGain);
+        return static_cast<uint64_t>(ramArea.feedforward1stGain);
     case CT::BusWatchdog:
-        return static_cast<uint64_t>(values.busWatchdog);
+        return static_cast<uint64_t>(ramArea.busWatchdog);
     case CT::GoalPWM:
-        return static_cast<uint64_t>(values.goalPWM);
+        return static_cast<uint64_t>(ramArea.goalPWM);
     case CT::GoalVelocity:
-        return static_cast<uint64_t>(values.goalVelocity);
+        return static_cast<uint64_t>(ramArea.goalVelocity);
     case CT::ProfileAcceleration:
-        return static_cast<uint64_t>(values.profileAcceleration);
+        return static_cast<uint64_t>(ramArea.profileAcceleration);
     case CT::ProfileVelocity:
-        return static_cast<uint64_t>(values.profileVelocity);
+        return static_cast<uint64_t>(ramArea.profileVelocity);
     case CT::GoalPosition:
-        return static_cast<uint64_t>(values.goalPosition);
+        return static_cast<uint64_t>(ramArea.goalPosition);
     case CT::RealtimeTick:
-        return static_cast<uint64_t>(values.realtimeTick);
+        return static_cast<uint64_t>(ramArea.realtimeTick);
     case CT::Moving:
-        return static_cast<uint64_t>(values.moving);
+        return static_cast<uint64_t>(ramArea.moving);
     case CT::MovingStatus:
-        return static_cast<uint64_t>(values.movingStatus);
+        return static_cast<uint64_t>(ramArea.movingStatus);
     case CT::PresentPWM:
-        return static_cast<uint64_t>(values.presentPWM);
+        return static_cast<uint64_t>(ramArea.presentPWM);
     case CT::PresentLoad:
-        return static_cast<uint64_t>(values.presentLoad);
+        return static_cast<uint64_t>(ramArea.presentLoad);
     case CT::PresentVelocity:
-        return static_cast<uint64_t>(values.presentVelocity);
+        return static_cast<uint64_t>(ramArea.presentVelocity);
     case CT::PresentPosition:
-        return static_cast<uint64_t>(values.presentPosition);
+        return static_cast<uint64_t>(ramArea.presentPosition);
     case CT::VelocityTrajectory:
-        return static_cast<uint64_t>(values.velocityTrajectory);
+        return static_cast<uint64_t>(ramArea.velocityTrajectory);
     case CT::PositionTrajectory:
-        return static_cast<uint64_t>(values.positionTrajectory);
+        return static_cast<uint64_t>(ramArea.positionTrajectory);
     case CT::PresentInputVoltage:
-        return static_cast<uint64_t>(values.presentInputVoltage);
+        return static_cast<uint64_t>(ramArea.presentInputVoltage);
     case CT::PresentTemperature:
-        return static_cast<uint64_t>(values.presentTemperature);
+        return static_cast<uint64_t>(ramArea.presentTemperature);
     case CT::BackupReady:
-        return static_cast<uint64_t>(values.backupReady);
+        return static_cast<uint64_t>(ramArea.backupReady);
     default:
         return 0xDEADBEEF;
     }
 }
 
+uint8_t ControlTable::get_size(CT field)
+{
+    switch (field) {
+    // Flash values
+    case CT::ModelNumber:
+        return 2;
+    case CT::ModelInformation:
+        return 4;
+    case CT::FirmwareVersion:
+        return 2;
+    case CT::ID:
+        return 1;
+    case CT::BaudRate:
+        return 1;
+    case CT::ReturnDelayTime:
+        return 1;
+    case CT::DriveMode:
+        return 1;
+    case CT::OperatingMode:
+        return 1;
+    case CT::SecondaryID:
+        return 1;
+    case CT::ProtocolType:
+        return 1;
+    case CT::HomingOffset:
+        return 4;
+    case CT::MovingThreshold:
+        return 4;
+    case CT::TemperatureLimit:
+        return 1;
+    case CT::MaxVoltageLimit:
+        return 2;
+    case CT::MinVoltageLimit:
+        return 2;
+    case CT::PWMLimit:
+        return 2;
+    case CT::VelocityLimit:
+        return 4;
+    case CT::MaxPositionLimit:
+        return 4;
+    case CT::MinPositionLimit:
+        return 4;
+    case CT::StartupConfiguration:
+        return 1;
+    case CT::Shutdown:
+        return 1;
+
+    // RAM Values
+    case CT::TorqueEnable:
+        return 1;
+    case CT::LED:
+        return 1;
+    case CT::StatusReturnLevel:
+        return 1;
+    case CT::RegisteredInstruction:
+        return 1;
+    case CT::HardwareErrorStatus:
+        return 1;
+    case CT::VelocityIGain:
+        return 2;
+    case CT::VelocityPGain:
+        return 2;
+    case CT::PositionDGain:
+        return 2;
+    case CT::PositionIGain:
+        return 2;
+    case CT::PositionPGain:
+        return 2;
+    case CT::Feedforward2ndGain:
+        return 2;
+    case CT::Feedforward1stGain:
+        return 2;
+    case CT::BusWatchdog:
+        return 1;
+    case CT::GoalPWM:
+        return 2;
+    case CT::GoalVelocity:
+        return 4;
+    case CT::ProfileAcceleration:
+        return 4;
+    case CT::ProfileVelocity:
+        return 4;
+    case CT::GoalPosition:
+        return 4;
+    case CT::RealtimeTick:
+        return 2;
+    case CT::Moving:
+        return 1;
+    case CT::MovingStatus:
+        return 1;
+    case CT::PresentPWM:
+        return 2;
+    case CT::PresentLoad:
+        return 2;
+    case CT::PresentVelocity:
+        return 4;
+    case CT::PresentPosition:
+        return 4;
+    case CT::VelocityTrajectory:
+        return 4;
+    case CT::PositionTrajectory:
+        return 4;
+    case CT::PresentInputVoltage:
+        return 2;
+    case CT::PresentTemperature:
+        return 1;
+    case CT::BackupReady:
+        return 1;
+    default:
+        return 0xDEADBEEF;
+    }
+}
+
+
 void ControlTable::set(CT field, uint64_t value)
 {
     switch (field) {
     case CT::ModelNumber:
-        nvValues.modelNumber = value;
+        ramArea.modelNumber = value;
         break;
     case CT::ModelInformation:
-        nvValues.modelInformation = value;
+        ramArea.modelInformation = value;
         break;
     case CT::FirmwareVersion:
-        nvValues.firmwareVersion = value;
+        ramArea.firmwareVersion = value;
         break;
     case CT::ID:
-        nvValues.ID = value;
+        ramArea.ID = value;
         break;
     case CT::BaudRate:
-        nvValues.baudRate = value;
+        ramArea.baudRate = value;
         break;
     case CT::ReturnDelayTime:
-        nvValues.returnDelayTime = value;
+        ramArea.returnDelayTime = value;
         break;
     case CT::DriveMode:
-        nvValues.driveMode = value;
+        ramArea.driveMode = value;
         break;
     case CT::OperatingMode:
-        nvValues.operatingMode = value;
+        ramArea.operatingMode = value;
         break;
     case CT::SecondaryID:
-        nvValues.secondaryID = value;
+        ramArea.secondaryID = value;
         break;
     case CT::ProtocolType:
-        nvValues.protocolType = value;
+        ramArea.protocolType = value;
         break;
     case CT::HomingOffset:
-        nvValues.homingOffset = value;
+        ramArea.homingOffset = value;
         break;
     case CT::MovingThreshold:
-        nvValues.movingThreshold = value;
+        ramArea.movingThreshold = value;
         break;
     case CT::TemperatureLimit:
-        nvValues.temperatureLimit = value;
+        ramArea.temperatureLimit = value;
         break;
     case CT::MaxVoltageLimit:
-        nvValues.maxVoltageLimit = value;
+        ramArea.maxVoltageLimit = value;
         break;
     case CT::MinVoltageLimit:
-        nvValues.minVoltageLimit = value;
+        ramArea.minVoltageLimit = value;
         break;
     case CT::PWMLimit:
-        nvValues.pwmLimit = value;
+        ramArea.pwmLimit = value;
         break;
     case CT::VelocityLimit:
-        nvValues.velocityLimit = value;
+        ramArea.velocityLimit = value;
         break;
     case CT::MaxPositionLimit:
-        nvValues.maxPositionLimit = value;
+        ramArea.maxPositionLimit = value;
         break;
     case CT::MinPositionLimit:
-        nvValues.minPositionLimit = value;
+        ramArea.minPositionLimit = value;
         break;
     case CT::StartupConfiguration:
-        nvValues.startupConfiguration = value;
+        ramArea.startupConfiguration = value;
         break;
     case CT::Shutdown:
-        nvValues.shutdown = value;
+        ramArea.shutdown = value;
         break;
     case CT::TorqueEnable:
-        values.torqueEnable = value;
+        ramArea.torqueEnable = value;
         break;
     case CT::LED:
-        values.LED = value;
+        ramArea.LED = value;
         break;
     case CT::StatusReturnLevel:
-        values.statusReturnLevel = value;
+        ramArea.statusReturnLevel = value;
         break;
     case CT::RegisteredInstruction:
-        values.registeredInstruction = value;
+        ramArea.registeredInstruction = value;
         break;
     case CT::HardwareErrorStatus:
-        values.hardwareErrorStatus = value;
+        ramArea.hardwareErrorStatus = value;
         break;
     case CT::VelocityIGain:
-        values.velocityIGain = value;
+        ramArea.velocityIGain = value;
         break;
     case CT::VelocityPGain:
-        values.velocityPGain = value;
+        ramArea.velocityPGain = value;
         break;
     case CT::PositionDGain:
-        values.positionDGain = value;
+        ramArea.positionDGain = value;
         break;
     case CT::PositionIGain:
-        values.positionIGain = value;
+        ramArea.positionIGain = value;
         break;
     case CT::PositionPGain:
-        values.positionPGain = value;
+        ramArea.positionPGain = value;
         break;
     case CT::Feedforward2ndGain:
-        values.feedforward2ndGain = value;
+        ramArea.feedforward2ndGain = value;
         break;
     case CT::Feedforward1stGain:
-        values.feedforward1stGain = value;
+        ramArea.feedforward1stGain = value;
         break;
     case CT::BusWatchdog:
-        values.busWatchdog = value;
+        ramArea.busWatchdog = value;
         break;
     case CT::GoalPWM:
-        values.goalPWM = value;
+        ramArea.goalPWM = value;
         break;
     case CT::GoalVelocity:
-        values.goalVelocity = value;
+        ramArea.goalVelocity = value;
         break;
     case CT::ProfileAcceleration:
-        values.profileAcceleration = value;
+        ramArea.profileAcceleration = value;
         break;
     case CT::ProfileVelocity:
-        values.profileVelocity = value;
+        ramArea.profileVelocity = value;
         break;
     case CT::GoalPosition:
-        values.goalPosition = value;
+        ramArea.goalPosition = value;
         break;
     case CT::RealtimeTick:
-        values.realtimeTick = value;
+        ramArea.realtimeTick = value;
         break;
     case CT::Moving:
-        values.moving = value;
+        ramArea.moving = value;
         break;
     case CT::MovingStatus:
-        values.movingStatus = value;
+        ramArea.movingStatus = value;
         break;
     case CT::PresentPWM:
-        values.presentPWM = value;
+        ramArea.presentPWM = value;
         break;
     case CT::PresentLoad:
-        values.presentLoad = value;
+        ramArea.presentLoad = value;
         break;
     case CT::PresentVelocity:
-        values.presentVelocity = value;
+        ramArea.presentVelocity = value;
         break;
     case CT::PresentPosition:
-        values.presentPosition = value;
+        ramArea.presentPosition = value;
         break;
     case CT::VelocityTrajectory:
-        values.velocityTrajectory = value;
+        ramArea.velocityTrajectory = value;
         break;
     case CT::PositionTrajectory:
-        values.positionTrajectory = value;
+        ramArea.positionTrajectory = value;
         break;
     case CT::PresentInputVoltage:
-        values.presentInputVoltage = value;
+        ramArea.presentInputVoltage = value;
         break;
     case CT::PresentTemperature:
-        values.presentTemperature = value;
+        ramArea.presentTemperature = value;
         break;
     case CT::BackupReady:
-        values.backupReady = value;
+        ramArea.backupReady = value;
         break;
     default:
         return;
     }
 }
 
-void ControlTable::flash()
-{
-    static FLASH_EraseInitTypeDef eraseInitStruct;
+// void ControlTable::flash()
+// {
+//     static FLASH_EraseInitTypeDef eraseInitStruct;
 
-    // Unlock the flash to enable the flash control register access
-    HAL_FLASH_Unlock();
+//     // Unlock the flash to enable the flash control register access
+//     HAL_FLASH_Unlock();
 
-    eraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
-    eraseInitStruct.PageAddress = nvStartAddress;
-    eraseInitStruct.NbPages = 1;
+//     eraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES;
+//     eraseInitStruct.PageAddress = nvStartAddress;
+//     eraseInitStruct.NbPages = 1;
 
-    uint32_t pageError;
-    if (HAL_FLASHEx_Erase(&eraseInitStruct, &pageError) != HAL_OK) {
-        uint32_t err = HAL_FLASH_GetError();
-        (void)err;
-        return;
-    }
+//     uint32_t pageError;
+//     if (HAL_FLASHEx_Erase(&eraseInitStruct, &pageError) != HAL_OK) {
+//         uint32_t err = HAL_FLASH_GetError();
+//         (void)err;
+//         return;
+//     }
 
-    // i -> size of nvValues in **doublewords(64-bit)**
-    for (uint32_t i = 0; i < sizeof(NonvolatileValues) / 8; i++) {
-        // Access the i-th doubleword
-        uint64_t val = reinterpret_cast<uint64_t*>(&nvValues)[i];
+//     // i -> size of nvValues in **doublewords(64-bit)**
+//     for (uint32_t i = 0; i < sizeof(NonvolatileValues) / 8; i++) {
+//         // Access the i-th doubleword
+//         uint64_t val = reinterpret_cast<uint64_t*>(&nvValues)[i];
 
-        // Flash the doubleworld
-        if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, nvStartAddress + i * 8, val) != HAL_OK) {
-            uint32_t err = HAL_FLASH_GetError();
-            (void)err;
-            return;
-        }
-    }
+//         // Flash the doubleworld
+//         if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, nvStartAddress + i * 8, val) != HAL_OK) {
+//             uint32_t err = HAL_FLASH_GetError();
+//             (void)err;
+//             return;
+//         }
+//     }
 
-    // Lock the Flash to disable the flash control register access
-    HAL_FLASH_Lock();
-}
+//     // Lock the Flash to disable the flash control register access
+//     HAL_FLASH_Lock();
+// }
