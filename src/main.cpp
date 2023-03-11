@@ -10,6 +10,7 @@ void dummy_sbrk_caller()
 #include "port_handler.h"
 #include "stm32f1xx_hal.h"
 #include "utility.h"
+#include "as5600.h"
 #include <FreeRTOS.h>
 #include <cstdio>
 #include <queue.h>
@@ -37,12 +38,11 @@ uint8_t rx_buffer[UART_RX__SZ];
 /*
  * The tasks as described in the comments at the top of this file.
  */
-static void prvQueueReceiveTask( void *pvParameters );
-// static void prvQueueSendTask( void *pvParameters );
+static void prvQueueCommunicationTask( void *pvParameters );
+static void prvAngleMeasureTask( void *pvParameters );
 
 /*-----------------------------------------------------------*/
 
-// TODO: Move these to class when working
 void UART_DMA_Init();
 void resetUARTtoReceive();
 
@@ -75,25 +75,24 @@ int main(void)
 
     /* Create the queue. */
     rxBufferQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( rx_buffer ) );
-    // txBufferQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( uint8_t ) );
 
     if( rxBufferQueue != NULL )
     {
-        /* Start the two tasks as described in the comments at the top of this
-        file. */
-        // xTaskCreate(prvQueueSendTask,
-        //             "TX",
-        //             configMINIMAL_STACK_SIZE,
-        //             NULL,
-        //             mainQUEUE_SEND_TASK_PRIORITY,
-        //             NULL );
+        /* Start Magnetic Encoder read tasks.*/
+        xTaskCreate(prvAngleMeasureTask,
+                    "ANGLE_MEAS",
+                    configMINIMAL_STACK_SIZE,
+                    NULL,
+                    mainQUEUE_SEND_TASK_PRIORITY,
+                    NULL );
 
-        xTaskCreate(prvQueueReceiveTask, /* The function that implements the task. */
-            "Rx", /* The text name assigned to the task - for debug only as it is not used by the kernel. */
-            configMINIMAL_STACK_SIZE, /* The size of the stack to allocate to the task. */
-            NULL, /* The parameter passed to the task - not used in this case. */
-            mainQUEUE_RECEIVE_TASK_PRIORITY, /* The priority assigned to the task. */
-            NULL); /* The task handle is not required, so NULL is passed. */
+        /* Start the communications tasks.*/
+        xTaskCreate(prvQueueCommunicationTask,
+                    "COMMUNICATIONS",
+                    configMINIMAL_STACK_SIZE,
+                    NULL,
+                    mainQUEUE_RECEIVE_TASK_PRIORITY,
+                    NULL);
 
         /* Start the tasks and timer running. */
         vTaskStartScheduler();
@@ -105,14 +104,26 @@ int main(void)
 }
 
 /*-----------------------------------------------------------*/
+static void prvAngleMeasureTask(void* pvParameters)
+{
+    volatile uint32_t angle;
+    volatile uint32_t previous_angle;
+    while (1)
+    {
+        angle = MagneticEncoder::GetAngle();
+        ControlTable::set(CT::PresentPosition, angle);
+        HAL_Delay(100);
+        previous_angle = ControlTable::get(CT::PresentPosition);
+    }
+}
 
-static void prvQueueReceiveTask(void* pvParameters)
+
+static void prvQueueCommunicationTask(void* pvParameters)
 {
 
     /* Remove compiler warning about unused parameter. */
     (void)pvParameters;
     uint8_t rx_packet[UART_RX__SZ];
-
 
     while (1)
     {
@@ -123,7 +134,6 @@ static void prvQueueReceiveTask(void* pvParameters)
             HAL_GPIO_TogglePin(GREEN_LED_GPIO_Port, GREEN_LED_Pin);
             if (PacketHandler::rxPacket(rx_packet) == COMM_SUCCESS)
             {
-                
                 PacketHandler::txPacket(rx_packet);
             }
             else

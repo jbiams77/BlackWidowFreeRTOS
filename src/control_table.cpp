@@ -13,7 +13,7 @@ std::vector<uint8_t> ControlTable::recover_data(uint16_t offset, uint16_t data_l
     for (uint8_t i = 0; i < data_length; ++i) {
         *packed_data_ptr++ = *(start_address + i);
     }
-
+    
     return packed_data;
 }
 
