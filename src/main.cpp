@@ -11,20 +11,22 @@ void dummy_sbrk_caller()
 #include "stm32f1xx_hal.h"
 #include "utility.h"
 #include "as5600.h"
+#include "motor_control.h"
 #include <FreeRTOS.h>
+#include <semphr.h>
 #include <cstdio>
 #include <queue.h>
 #include <stdio.h>
 #include <string.h>
 #include <task.h>
 
-/* Priorities at which the tasks are created. */
-#define mainQUEUE_RECEIVE_TASK_PRIORITY (tskIDLE_PRIORITY + 2)
-#define mainQUEUE_SEND_TASK_PRIORITY (tskIDLE_PRIORITY + 1)
-
+/* Priorities at which the tasks are created. Higher number is higher priority*/
+#define RECEIVE_TASK_PRIORITY (tskIDLE_PRIORITY + 3)
+#define MOTOR_CONTROL_TASK_PRIORITY (tskIDLE_PRIORITY + 1)
+#define ANGLE_MEASURE_TASK_PRIORITY (tskIDLE_PRIORITY + 1)
 /* The rate at which data is sent to the queue.  The 200ms value is converted
 to ticks using the portTICK_PERIOD_MS constant. */
-#define mainQUEUE_SEND_FREQUENCY_MS (200 / portTICK_PERIOD_MS)
+#define mainQUEUE_SEND_FREQUENCY_MS (100 / portTICK_PERIOD_MS)
 
 /* The number of items the queue can hold.  This is 1 as the receive task
 will remove items as they are added, meaning the send task should always find
@@ -38,8 +40,10 @@ uint8_t rx_buffer[UART_RX__SZ];
 /*
  * The tasks as described in the comments at the top of this file.
  */
-static void prvQueueCommunicationTask( void *pvParameters );
-static void prvAngleMeasureTask( void *pvParameters );
+static void prvMotorControllerTask(void *pvParameters);
+static void prvQueueCommunicationTask(void *pvParameters);
+static void prvAngleMeasureTask(void *pvParameters);
+static SemaphoreHandle_t mutex = NULL;
 
 /*-----------------------------------------------------------*/
 
@@ -76,22 +80,34 @@ int main(void)
     /* Create the queue. */
     rxBufferQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( rx_buffer ) );
 
+    if (mutex == NULL) {
+        mutex = xSemaphoreCreateMutex();
+    }
+
     if( rxBufferQueue != NULL )
     {
-        /* Start Magnetic Encoder read tasks.*/
+        /* Start Magnetic Encoder read task */
         xTaskCreate(prvAngleMeasureTask,
-                    "ANGLE_MEAS",
+                    "ANGLE_MEASUREMENT",
                     configMINIMAL_STACK_SIZE,
                     NULL,
-                    mainQUEUE_SEND_TASK_PRIORITY,
+                    ANGLE_MEASURE_TASK_PRIORITY,
                     NULL );
 
-        /* Start the communications tasks.*/
+        // /* Start the motor controller task */
+        xTaskCreate(prvMotorControllerTask,
+                    "MOTOR_CONTROL",
+                    configMINIMAL_STACK_SIZE,
+                    NULL,
+                    MOTOR_CONTROL_TASK_PRIORITY,
+                    NULL);
+
+        /* Start the communications task */
         xTaskCreate(prvQueueCommunicationTask,
                     "COMMUNICATIONS",
                     configMINIMAL_STACK_SIZE,
                     NULL,
-                    mainQUEUE_RECEIVE_TASK_PRIORITY,
+                    RECEIVE_TASK_PRIORITY,
                     NULL);
 
         /* Start the tasks and timer running. */
@@ -107,13 +123,35 @@ int main(void)
 static void prvAngleMeasureTask(void* pvParameters)
 {
     volatile uint32_t angle;
-    volatile uint32_t previous_angle;
     while (1)
     {
         angle = MagneticEncoder::GetAngle();
         ControlTable::set(CT::PresentPosition, angle);
-        HAL_Delay(100);
-        previous_angle = ControlTable::get(CT::PresentPosition);
+        HAL_Delay(500);
+    }
+}
+
+
+static void prvMotorControllerTask(void* pvParameters)
+{
+    /*  Mode table
+    *  | M0 | M1 | M2 | Microstep |
+    *  |====|====|====|===========|
+    *  | 0  | 0  | 0  | Full Step |
+    *  | 1  | 0  | 0  | Half Step |
+    *  | 0  | 1  | 0  | 1/4 Step  |
+    *  | 1  | 1  | 0  | 1/8 Step  |
+    *  | 0  | 0  | 1  | 1/16 Step |
+    *  | 1  | 0  | 1  | 1/32 Step |
+    *  |----|----|----|-----------|
+    */
+    MotorControl::set_mode(ON, ON, OFF);  // 1/8th step
+    while (1)
+    {
+        if (ControlTable::get(CT::TorqueEnable)){
+            MotorControl::move_to_goal();
+            HAL_Delay(1);
+        }
     }
 }
 

@@ -28,6 +28,9 @@
 #define HIGH GPIO_PIN_SET
 #define LOW GPIO_PIN_RESET
 #define UART_RX__SZ            ( 64 )
+#define OFF GPIO_PIN_RESET
+#define ON GPIO_PIN_SET
+
 
 void SystemClock_Config(void);
 void MX_GPIO_Init(void);
